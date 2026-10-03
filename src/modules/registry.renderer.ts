@@ -4,5 +4,12 @@ import { cajaModule } from "./caja/renderer";
 import { inventarioModule } from "./inventario/renderer";
 import { monedasModule } from "./monedas/renderer";
 import { nucleoModule } from "./nucleo/renderer";
+import { ventasModule } from "./ventas/renderer";
 
-export const rendererModules: RendererModule[] = sortByDependencies([nucleoModule, monedasModule, inventarioModule, cajaModule]);
+export const rendererModules: RendererModule[] = sortByDependencies([
+  nucleoModule,
+  monedasModule,
+  inventarioModule,
+  cajaModule,
+  ventasModule,
+]);

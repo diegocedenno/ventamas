@@ -1,0 +1,379 @@
+/* Pantalla de venta: a la izquierda se arma la venta; a la derecha se cobra. */
+
+.pos {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: var(--s-5);
+  align-items: start;
+  max-width: 1320px;
+  margin-inline: auto;
+  padding: var(--s-5) var(--s-5) var(--s-7);
+}
+
+.pos-main {
+  display: grid;
+  gap: var(--s-4);
+  min-width: 0;
+}
+
+.pos-top {
+  display: flex;
+  gap: var(--s-3);
+  align-items: flex-start;
+}
+
+.gate {
+  display: grid;
+  gap: var(--s-4);
+}
+
+/* ---------- buscador ---------- */
+
+.pos-search {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.pos-search-input {
+  min-height: 52px;
+  font-size: var(--fs-lg);
+}
+
+.pos-results {
+  position: absolute;
+  top: calc(100% + var(--s-1));
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+  padding: var(--s-1);
+  max-height: 420px;
+  overflow-y: auto;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+}
+
+.pos-result {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: var(--s-4);
+  align-items: center;
+  min-height: var(--control);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.pos-result[aria-selected="true"] {
+  background: var(--accent-soft);
+}
+
+.pos-result-name {
+  font-weight: 550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pos-result-name .muted {
+  font-weight: 400;
+}
+
+.pos-result-out {
+  color: var(--danger);
+  font-size: var(--fs-sm);
+  font-weight: 550;
+}
+
+.pos-result .muted {
+  font-size: var(--fs-sm);
+}
+
+.pos-result-price {
+  min-width: 84px;
+  text-align: right;
+  font-weight: 550;
+}
+
+.pos-results-none {
+  padding: var(--s-3);
+  color: var(--text-2);
+}
+
+/* ---------- la venta ---------- */
+
+.cart td {
+  height: 64px;
+}
+
+.cart-name {
+  display: block;
+  font-weight: 550;
+}
+
+.cart-total {
+  font-weight: 650;
+}
+
+.cart-remove {
+  width: var(--control);
+  padding-left: 0 !important;
+}
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+}
+
+.stepper-value {
+  min-width: 2.2em;
+  text-align: center;
+  font-weight: 650;
+}
+
+/* ---------- el cobro ---------- */
+
+.pos-pay {
+  position: sticky;
+  top: var(--s-5);
+  display: grid;
+  gap: var(--s-4);
+  padding: var(--s-5);
+}
+
+.pos-total {
+  display: grid;
+  gap: 2px;
+}
+
+.pos-total-label,
+.pos-due-label {
+  font-size: var(--fs-sm);
+  font-weight: 550;
+  color: var(--text-2);
+}
+
+.pos-total-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.pos-lines {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--border);
+}
+
+.pos-lines li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: var(--s-2);
+  align-items: center;
+  min-height: 48px;
+  border-bottom: 1px solid var(--border);
+}
+
+.pos-line-text {
+  display: grid;
+  line-height: 1.25;
+}
+
+.pos-line-text .muted {
+  font-size: var(--fs-sm);
+}
+
+.pos-due,
+.pos-change,
+.pos-give {
+  display: grid;
+  gap: var(--s-1);
+}
+
+.pos-due-value {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  color: var(--danger);
+  line-height: 1.2;
+}
+
+.pos-change .pos-lines {
+  border-top: 0;
+}
+
+.pos-change-value {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--success);
+}
+
+.pos-methods {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-2);
+}
+
+.pos-method {
+  min-height: 52px;
+  padding: var(--s-1) var(--s-2);
+  font-size: var(--fs-sm);
+  line-height: 1.2;
+  text-align: center;
+}
+
+.pos-entry {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  background: var(--surface-2);
+  border-radius: var(--radius);
+}
+
+.pos-entry .amount-input {
+  min-height: 52px;
+  font-size: var(--fs-xl);
+  font-weight: 650;
+}
+
+.pos-entry-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-2);
+}
+
+.pos-shortcuts {
+  font-size: var(--fs-xs);
+  text-align: center;
+}
+
+/* ---------- elegir talla y color ---------- */
+
+.picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: var(--s-2);
+}
+
+.picker-option {
+  display: grid;
+  gap: 2px;
+  min-height: 64px;
+  padding: var(--s-2) var(--s-3);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    background-color var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease);
+}
+
+.picker-option:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.picker-label {
+  font-size: var(--fs-lg);
+  font-weight: 650;
+}
+
+.picker-stock {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.picker-option.is-out .picker-stock {
+  color: var(--danger);
+  font-weight: 550;
+}
+
+/* ---------- venta registrada ---------- */
+
+.sale-summary {
+  display: grid;
+  justify-items: center;
+  gap: var(--s-1);
+  text-align: center;
+}
+
+.sale-check {
+  color: var(--success);
+}
+
+.sale-total {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.sale-change {
+  display: grid;
+  justify-items: center;
+  gap: var(--s-1);
+  padding: var(--s-3);
+  background: var(--accent-soft);
+  border-radius: var(--radius);
+}
+
+.sale-change-label {
+  font-size: var(--fs-sm);
+  font-weight: 550;
+}
+
+.sale-change-line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+}
+
+.sale-change-line strong {
+  font-size: var(--fs-xl);
+}
+
+.sale-change-line .muted {
+  color: var(--text);
+}
+
+.sale-lines {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-sm);
+}
+
+.sale-lines li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-4);
+  padding: var(--s-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.sale-lines li:last-child {
+  border-bottom: 0;
+}
+
+/* En ventanas angostas el cobro pasa debajo de la venta. */
+@media (max-width: 1080px) {
+  .pos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pos-pay {
+    position: static;
+  }
+}
