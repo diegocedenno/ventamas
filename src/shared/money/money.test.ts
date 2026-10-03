@@ -48,7 +48,7 @@ describe("money", () => {
   it("formatea con coma decimal y punto de miles", () => {
     expect(format(money(6500, "USD"))).toBe("$ 65,00");
     expect(format(money(5632640, "VES"))).toBe("Bs 56.326,40");
-    expect(format(money(-150, "EUR"))).toBe("€ -1,50");
+    expect(format(money(-150, "EUR"))).toBe("−€ 1,50");
   });
 });
 

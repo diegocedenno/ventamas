@@ -104,7 +104,12 @@
 }
 
 .sidebar-foot {
+  display: grid;
+  gap: var(--s-3);
   margin-top: auto;
+}
+
+.sidebar-version {
   padding: 0 var(--s-3);
   font-size: var(--fs-xs);
   color: var(--text-2);

@@ -1,13 +1,11 @@
 import { useEffect, useRef } from "react";
-import { rendererModules } from "@modules/registry.renderer";
 import { Logo } from "./components/Logo";
 import { t } from "./i18n/es";
+import type { Screen } from "./modules";
 import { useApp } from "./state";
 
-export const screens = rendererModules.flatMap((module) => module.screens);
-
 export function App() {
-  const { settings, info, screen, goTo } = useApp();
+  const { settings, info, screen, goTo, screens } = useApp();
   const main = useRef<HTMLElement>(null);
   const current = screens.find((s) => s.id === screen) ?? screens[0];
 
@@ -24,6 +22,19 @@ export function App() {
 
   if (!current) return null;
   const Current = current.component;
+
+  const item = ({ id, label, icon: Icon }: Screen) => (
+    <button
+      key={id}
+      type="button"
+      className="nav-item"
+      aria-current={id === current.id ? "page" : undefined}
+      onClick={() => goTo(id)}
+    >
+      <Icon size={20} strokeWidth={1.75} aria-hidden="true" />
+      {label}
+    </button>
+  );
 
   return (
     <div className="shell">
@@ -43,25 +54,18 @@ export function App() {
         </div>
 
         <nav className="nav" aria-label={t("nav.label")}>
-          {screens.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              type="button"
-              className="nav-item"
-              aria-current={id === current.id ? "page" : undefined}
-              onClick={() => goTo(id)}
-            >
-              <Icon size={20} strokeWidth={1.75} aria-hidden="true" />
-              {t(label)}
-            </button>
-          ))}
+          {screens.filter((s) => !s.footer).map(item)}
         </nav>
 
-        <p className="sidebar-foot num">v{info.version}</p>
+        <div className="sidebar-foot">
+          <div className="nav">{screens.filter((s) => s.footer).map(item)}</div>
+          <p className="sidebar-version num">v{info.version}</p>
+        </div>
       </aside>
 
       <main className="content" id="contenido" ref={main} tabIndex={-1}>
-        <Current />
+        {/* La clave reinicia la pantalla al volver a ella: siempre abre con datos frescos. */}
+        <Current key={current.id} />
       </main>
     </div>
   );

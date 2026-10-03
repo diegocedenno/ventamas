@@ -1,13 +1,16 @@
 import { FolderOpen } from "lucide-react";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { APP } from "@shared/api";
 import { STORE_NAME_MAX } from "@shared/settings";
 import { THEMES, type ThemeId } from "@shared/themes";
-import { t } from "../../../renderer/src/i18n/es";
+import { call } from "../../../renderer/src/lib/ipc";
 import { useApp } from "../../../renderer/src/state";
+import { t } from "./texts";
 
 type Feedback = { kind: "ok" | "error"; text: string } | null;
 
 export function SettingsScreen() {
+  const { settingsSections } = useApp();
   return (
     <div className="page">
       <header>
@@ -15,6 +18,10 @@ export function SettingsScreen() {
       </header>
       <StoreSection />
       <ThemeSection />
+      {/* Cada módulo añade aquí sus propios ajustes. */}
+      {settingsSections.map(({ id, component: Section }) => (
+        <Section key={id} />
+      ))}
       <AboutSection />
     </div>
   );
@@ -168,7 +175,7 @@ function AboutSection() {
         </div>
       </dl>
       <div>
-        <button type="button" className="btn" onClick={() => void window.ventamas.app.openDataDir()}>
+        <button type="button" className="btn" onClick={() => void call<void>(APP.openDataDir)}>
           <FolderOpen size={20} strokeWidth={1.75} aria-hidden="true" />
           {t("settings.about.openData")}
         </button>

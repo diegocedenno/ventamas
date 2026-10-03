@@ -22,7 +22,7 @@ describe("ajustes", () => {
   it("guarda y vuelve a leer el nombre y el tema", () => {
     writeSetting(db, "store.name", "  Calzados   Altamira ");
     const settings = writeSetting(db, "ui.theme", "noche");
-    expect(settings).toEqual({ "store.name": "Calzados Altamira", "ui.theme": "noche" });
+    expect(settings).toEqual({ ...DEFAULT_SETTINGS, "store.name": "Calzados Altamira", "ui.theme": "noche" });
     expect(readSettings(db)).toEqual(settings);
   });
 
@@ -37,6 +37,9 @@ describe("ajustes", () => {
     expect(() => writeSetting(db, "ui.theme", "fucsia")).toThrow(SettingError);
     expect(() => writeSetting(db, "store.name", "x".repeat(61))).toThrow(SettingError);
     expect(() => writeSetting(db, "store.name", 42)).toThrow(SettingError);
+    expect(() => writeSetting(db, "receipt.width", 70)).toThrow(SettingError);
+    expect(() => writeSetting(db, "device.prefix", "caja 1")).toThrow(SettingError);
+    expect(() => writeSetting(db, "store.currency", "BTC")).toThrow(SettingError);
     expect(() => writeSetting(db, "no.existe", "x")).toThrow(TypeError);
     expect(readSettings(db)).toEqual(DEFAULT_SETTINGS);
   });

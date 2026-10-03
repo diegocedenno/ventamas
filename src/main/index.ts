@@ -1,13 +1,17 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { CHANNELS, type BootData } from "@shared/api";
+import { APP, BOOT_CHANNEL, GENERIC_ERROR, type BootData, type Result } from "@shared/api";
+import { UserError } from "@shared/errors";
 import { getTheme } from "@shared/themes";
-import { readSettings } from "@modules/core/main/settings";
+import { readSettings } from "@modules/nucleo/main/settings";
 import { mainModules } from "@modules/registry.main";
 import { backupBeforeUpdate } from "./db/backup";
 import { openDatabase, type Db } from "./db/database";
 import { runMigrations } from "./db/migrate";
+import { createLogger } from "./log";
+import type { Handler } from "./modules";
+import { registerPrinting } from "./printing";
 
 // Carpeta de datos alternativa: la usan las pruebas automáticas para no tocar la tienda real.
 // En desarrollo los datos van a una carpeta aparte de la aplicación instalada.
@@ -37,11 +41,13 @@ function startDatabase(dataDir: string): Db {
 }
 
 function registerIpc(database: Db, dataDir: string): void {
+  const logError = createLogger(dataDir);
+
   // Solo la ventana de la aplicación puede llamar a estas funciones.
   const fromApp = (event: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): boolean =>
     mainWindow !== undefined && event.sender === mainWindow.webContents;
 
-  ipcMain.on(CHANNELS.boot, (event) => {
+  ipcMain.on(BOOT_CHANNEL, (event) => {
     if (!fromApp(event)) {
       event.returnValue = null;
       return;
@@ -53,18 +59,26 @@ function registerIpc(database: Db, dataDir: string): void {
     event.returnValue = boot;
   });
 
-  const handle = (channel: string, handler: (...args: unknown[]) => unknown): void => {
-    ipcMain.handle(channel, (event, ...args: unknown[]) => {
-      if (!fromApp(event)) throw new Error("Origen no permitido.");
-      return handler(...args);
+  const handle = (channel: string, handler: Handler): void => {
+    ipcMain.handle(channel, async (event, ...args: unknown[]): Promise<Result<unknown>> => {
+      if (!fromApp(event)) return { ok: false, error: GENERIC_ERROR };
+      try {
+        return { ok: true, value: await handler(...args) };
+      } catch (error) {
+        if (error instanceof UserError) return { ok: false, error: error.message };
+        logError(channel, error);
+        return { ok: false, error: GENERIC_ERROR };
+      }
     });
   };
 
-  handle(CHANNELS.openDataDir, async () => {
+  handle(APP.openDataDir, async () => {
     await shell.openPath(dataDir);
   });
 
-  for (const module of mainModules) module.register({ db: database, handle });
+  registerPrinting({ window: () => mainWindow, settings: () => readSettings(database), dataDir, handle });
+
+  for (const module of mainModules) module.register({ db: database, dataDir, handle });
 }
 
 function createWindow(database: Db): BrowserWindow {

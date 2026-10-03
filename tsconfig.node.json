@@ -10,7 +10,7 @@
     "src/main/**/*",
     "src/preload/**/*",
     "src/shared/**/*",
-    "src/modules/*/manifest.ts",
+    "src/modules/*/*.ts",
     "src/modules/*/main/**/*",
     "src/modules/registry.main.ts"
   ]

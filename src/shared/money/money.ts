@@ -71,12 +71,12 @@ export function isZero(m: Money): boolean {
   return m.amount === 0;
 }
 
-/** "$ 65,00", "Bs 56.326,40". El separador decimal sigue al idioma (coma en español). */
+/** "$ 65,00", "Bs 56.326,40", "−$ 5,00". El separador decimal sigue al idioma (coma en español). */
 export function format(m: Money, locale = "es-VE"): string {
   const { symbol, decimals } = CURRENCIES[m.currency];
   const number = new Intl.NumberFormat(locale, {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
-  }).format(m.amount / 10 ** decimals);
-  return `${symbol} ${number}`;
+  }).format(Math.abs(m.amount) / 10 ** decimals);
+  return `${m.amount < 0 ? "−" : ""}${symbol} ${number}`;
 }

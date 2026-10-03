@@ -1,6 +1,6 @@
-/* Estilos de las pantallas del núcleo: Inicio y Ajustes. */
+/* Estilos de la pantalla de Ajustes y del aviso con icono que usan otras pantallas. */
 
-/* ---------- avisos de Inicio ---------- */
+/* ---------- aviso con icono ---------- */
 
 .notice {
   display: grid;

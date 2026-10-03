@@ -1,0 +1,98 @@
+/* Zona de impresión: en pantalla queda fuera de la vista (pero se puede medir); al
+   imprimir, es lo único que sale. Siempre en negro sobre blanco, sea cual sea el tema. */
+
+.print-zone {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  background: #ffffff;
+  color: #000000;
+  font-family: var(--font);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+@page {
+  margin: 0;
+}
+
+@media print {
+  html,
+  body {
+    height: auto;
+    background: #ffffff;
+    overflow: visible;
+  }
+
+  #root,
+  dialog {
+    display: none !important;
+  }
+
+  .print-zone {
+    position: static;
+  }
+}
+
+/* ---------- documento de recibo (recibo de venta y cierre de caja) ---------- */
+
+.doc {
+  /* El papel térmico no imprime hasta el borde. */
+  padding: 3mm 4mm 6mm;
+  font-variant-numeric: tabular-nums;
+}
+
+.doc-center {
+  text-align: center;
+}
+
+.doc-store {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.doc-tag {
+  margin-top: 1mm;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.doc-rule {
+  margin: 2mm 0;
+  border: 0;
+  border-top: 1px dashed #000000;
+}
+
+.doc-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 3mm;
+}
+
+.doc-row > :last-child {
+  flex: none;
+  text-align: right;
+}
+
+.doc-row--strong {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.doc-small {
+  font-size: 10px;
+}
+
+.doc-title {
+  margin: 0 0 1mm;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.doc-line + .doc-line {
+  margin-top: 1mm;
+}
