@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Pruebas e instalador
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Pruebas unitarias
+        run: npm test
+
+      - name: Compilar
+        run: npm run build
+
+      - name: Prueba de extremo a extremo
+        run: npm run e2e
+
+      - name: Generar instalador
+        run: npx electron-builder --win --publish never
+
+      - name: Probar la aplicación empaquetada
+        run: npm run e2e -- --packaged
+
+      - name: Guardar instalador
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ventamas-Instalador
+          path: dist/Ventamas-Instalador-*.exe
+          if-no-files-found: error
+
+      - name: Guardar capturas si algo falla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capturas-e2e
+          path: .e2e/capturas
+          if-no-files-found: ignore
