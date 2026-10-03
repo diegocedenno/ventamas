@@ -1,7 +1,7 @@
 {
   "name": "ventamas",
   "productName": "Ventamas",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Punto de venta, inventario y clientes para comercios pequeños. Funciona sin internet y cobra en varias monedas.",
   "author": "Diego Cedeño",
   "license": "AGPL-3.0-only",
@@ -19,6 +19,7 @@
     "test:watch": "vitest",
     "e2e": "node scripts/e2e.mjs",
     "icon": "node scripts/build-icon.mjs",
+    "lock-migrations": "node scripts/lock-migrations.mjs",
     "dist": "npm run build && electron-builder --win --publish never"
   },
   "devDependencies": {
