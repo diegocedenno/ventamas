@@ -1,6 +1,7 @@
 import { sortByDependencies } from "@shared/modules";
 import type { RendererModule } from "../renderer/src/modules";
+import { inventarioModule } from "./inventario/renderer";
 import { monedasModule } from "./monedas/renderer";
 import { nucleoModule } from "./nucleo/renderer";
 
-export const rendererModules: RendererModule[] = sortByDependencies([nucleoModule, monedasModule]);
+export const rendererModules: RendererModule[] = sortByDependencies([nucleoModule, monedasModule, inventarioModule]);

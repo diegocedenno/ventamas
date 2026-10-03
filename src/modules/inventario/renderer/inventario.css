@@ -1,0 +1,60 @@
+.products-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3) var(--s-5);
+}
+
+.products-search {
+  flex: 1 1 280px;
+  max-width: 420px;
+}
+
+.product-name {
+  font-weight: 550;
+}
+
+.product-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--fs-sm);
+}
+
+.product-review {
+  margin-left: var(--s-2);
+}
+
+/* ---------- editor ---------- */
+
+.product-form {
+  display: grid;
+  gap: var(--s-4);
+}
+
+.product-variants-hint {
+  margin-top: calc(var(--s-2) * -1);
+}
+
+.pieces td {
+  white-space: nowrap;
+}
+
+.pieces .input {
+  min-width: 120px;
+}
+
+.pieces-stock {
+  width: 130px;
+}
+
+.pieces-stock .input {
+  min-width: 0;
+  text-align: right;
+}
+
+.pieces-remove {
+  width: var(--control);
+  padding-left: 0 !important;
+}
