@@ -11,8 +11,9 @@ Los datos de la tienda viven en un archivo local. El PRD proponía SQLite con Dr
 1. **Motor:** el SQLite que trae Node (`node:sqlite`), disponible dentro de Electron 44. No se usa `better-sqlite3`.
 2. **Migraciones:** un ejecutor propio (`src/main/db/migrate.ts`). Cada módulo declara sus migraciones como SQL en
    orden; el ejecutor aplica las pendientes, cada una en su transacción.
-3. **Capa de consultas:** por ahora, SQL directo con sentencias preparadas. La elección entre Drizzle, Kysely o
-   seguir con SQL se toma en la fase 1, cuando existan consultas reales que comparar.
+3. **Capa de consultas:** SQL directo con sentencias preparadas. En la fase 1, con las consultas reales de
+   productos, caja y ventas escritas, se decidió seguir así: son pocas, se leen bien y no añaden dependencias.
+   Cada módulo concentra su SQL en un archivo (`products.ts`, `cash.ts`, `sales.ts`) y devuelve tipos propios.
 
 ## Por qué
 
@@ -32,6 +33,15 @@ Los datos de la tienda viven en un archivo local. El PRD proponía SQLite con Dr
 - Si la base de datos tiene migraciones que el programa no conoce, es que viene de una versión más nueva: la
   aplicación no la abre y pide actualizar.
 - Si una migración falla, se deshace completa y la aplicación no arranca con datos a medias.
+- La prueba `src/modules/migrations.test.ts` guarda la huella de cada migración publicada
+  (`migrations.lock.json`) y falla si alguna se edita o desaparece. Una migración nueva se registra con
+  `npm run lock-migrations`.
+
+## Hechos inmutables
+
+Las tablas de hechos (ventas, líneas, movimientos de dinero y de inventario, tasas, conteos de cierre) llevan
+disparadores que rechazan cualquier `UPDATE` o `DELETE` (`src/main/db/facts.ts`). La regla de "nada se borra" la
+garantiza la propia base de datos, no solo el código.
 
 ## Durabilidad
 

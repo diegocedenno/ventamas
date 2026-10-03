@@ -336,7 +336,7 @@ Sin fechas, porque no hay fecha fija. **[Acordado]** Cada fase termina en algo q
 | Fase | Qué se construye | Qué queda usable al terminar |
 |---|---|---|
 | **0. Cimientos** (hecha) | Repositorio, licencia, decisión de Electron, modelo de datos, sistema de diseño con los ocho temas, e instalador generado automáticamente. | Un instalador que abre una aplicación vacía con la marca. |
-| **1. Vender** | Productos con tallas y colores, venta con cobro en varias monedas, tasas, recibo, y apertura y cierre de caja. | Una tienda puede vender y cerrar caja. Primera versión de prueba pública. |
+| **1. Vender** (hecha) | Productos con tallas y colores, venta con cobro en varias monedas, tasas, recibo, y apertura y cierre de caja. | Una tienda puede vender y cerrar caja. Primera versión de prueba pública. |
 | **2. Clientes y crédito** | Clientes, apartados, fiado, abonos, saldo a favor, cambios y devoluciones. | Reemplaza el cuaderno de fiado. |
 | **3. Control** | Inventario completo, reportes, usuarios y permisos, respaldo y restauración. | El dueño puede dejar la tienda en manos de un vendedor. |
 | **4. Primera impresión** | Asistente inicial, marca, tienda de demostración, guía paso a paso, manual y sitio web. | Versión 1.0. |
@@ -400,6 +400,23 @@ comprobación; el recibo no fiscal no requiere validación previa; no habrá tie
 
 ## 15. Siguiente paso
 
-La fase 0 está hecha; sigue la fase 1 (vender). Las decisiones técnicas quedan registradas en
-[decisiones/](decisiones/). Queda pendiente de la fase 0 probar la aplicación en un equipo modesto (Windows 10,
-4 GB de memoria, disco mecánico).
+Las fases 0 y 1 están hechas (versión 0.2); sigue la fase 2 (clientes y crédito). Las decisiones técnicas quedan
+registradas en [decisiones/](decisiones/).
+
+### Lo que la fase 1 dejó para después
+
+| Requisito | Qué falta | Cuándo |
+|---|---|---|
+| VEN-05 | Dejar el vuelto como saldo a favor del cliente. Hoy el vuelto se entrega completo, en una o varias monedas. | Fase 2, con los clientes. |
+| VEN-07 | Asociar la venta a un cliente. | Fase 2. |
+| MON-02 | Elegir la moneda de los precios. Hoy es el dólar; el ajuste existe, pero no hay pantalla para cambiarlo. | Fase 4, en el asistente inicial. |
+| MON-04 | Que solo el dueño cambie las tasas. Hoy no hay usuarios: cualquiera puede. | Fase 3. |
+| COM-03 | Enviar el recibo por WhatsApp. Hoy se puede guardar como PDF y adjuntarlo a mano. | Fase 2, con el teléfono del cliente. |
+| INV-01 | Foto del producto. | Fase 3. |
+| — | Anular una venta hecha por error. | Fase 2, con las devoluciones. |
+
+### Pendiente de comprobar con equipos reales
+
+- La aplicación en un equipo modesto (Windows 10, 4 GB de memoria, disco mecánico).
+- La impresión del recibo en una impresora térmica de 58 y de 80 mm. El recibo se revisó como PDF.
+- Un lector de códigos de barras real. Se probó tecleando el código y pulsando Enter, que es lo que hace un lector.

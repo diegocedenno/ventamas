@@ -35,8 +35,31 @@ Espaciado en múltiplos de 4 px (`--s-1` a `--s-7`: 4, 8, 12, 16, 24, 32, 48). R
 
 ## Ventana
 
-Barra lateral fija de 240 px con la marca, el nombre de la tienda y el menú; a la derecha, el contenido con un
-ancho máximo de 880 px. Ventana mínima de 960 × 600.
+Barra lateral fija de 240 px con la marca, el nombre de la tienda y el menú (Ajustes va al pie); a la derecha, el
+contenido con un ancho máximo de 880 px, o 1180 px en las pantallas con tablas. Ventana mínima de 960 × 600.
+
+## Componentes compartidos
+
+Viven en `src/renderer/src` y los usan todos los módulos.
+
+| Pieza | Para qué |
+|---|---|
+| `Dialog` | Ventana modal sobre el `<dialog>` nativo: atrapa el foco, cierra con Esc y devuelve el foco. Empieza en lo marcado con `data-autofocus`. |
+| `Field`, `AmountInput` | Campo con etiqueta visible, ayuda y error junto al control; campo de monto con el símbolo de su moneda. |
+| `ErrorNote`, `Empty` | Aviso de error de una operación; estado vacío que explica qué falta y ofrece el siguiente paso. |
+| `Print` | Zona de impresión: dibuja un documento fuera de pantalla, lo mide y lo manda a la impresora o a un PDF. |
+| `useData`, `useOnce`, `call` | Cargar datos del proceso principal; impedir que un doble clic repita una operación; llamar a un canal. |
+| `kit.css` | Botones, tablas, insignias, interruptores, cifras destacadas y avisos. |
+
+Cada módulo guarda sus textos (`texts.ts`) y sus estilos propios en su carpeta.
+
+Los documentos impresos (recibo, cierre de caja) van siempre en negro sobre blanco, sea cual sea el tema: es la
+única excepción a la regla de no usar colores sueltos.
+
+## Teclado en la pantalla de venta
+
+`F2` lleva al buscador, `F4` a los medios de pago y `F9` cobra. Tras cada paso el foco pasa solo al siguiente:
+del monto al siguiente medio de pago, y de ahí al botón de cobrar cuando la cuenta cuadra.
 
 ## Temas
 
