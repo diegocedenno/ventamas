@@ -1,0 +1,35 @@
+appId: org.ventamas.app
+productName: Ventamas
+copyright: Copyright © 2026 Diego Cedeño. Software libre bajo licencia AGPL-3.0.
+
+directories:
+  buildResources: build
+  output: dist
+
+# Todo el código va empaquetado por Vite en out/; no hay dependencias que copiar.
+files:
+  - out/**
+  - package.json
+  - LICENSE
+
+# Solo los idiomas de Chromium que se usan: instalador más liviano.
+electronLanguages: [es, es-419, en-US]
+
+win:
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch: [x64]
+
+# Instalador de un clic, por usuario: no pide permisos de administrador.
+nsis:
+  oneClick: true
+  perMachine: false
+  artifactName: Ventamas-Instalador-${version}.${ext}
+  shortcutName: Ventamas
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  # Desinstalar o actualizar nunca borra los datos de la tienda.
+  deleteAppDataOnUninstall: false
+  installerLanguages: [es_ES]
+  language: "3082"
