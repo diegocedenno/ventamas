@@ -1,0 +1,152 @@
+/* Armazón de la ventana: barra lateral fija y contenido que desplaza. */
+
+.shell {
+  display: grid;
+  grid-template-columns: var(--sidebar) minmax(0, 1fr);
+  height: 100%;
+}
+
+.skip-link {
+  position: absolute;
+  top: var(--s-2);
+  left: var(--s-2);
+  z-index: 100;
+  padding: var(--s-2) var(--s-4);
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: var(--radius);
+  font-weight: 550;
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+
+.skip-link:focus-visible {
+  transform: none;
+}
+
+/* ---------- barra lateral ---------- */
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+  padding: var(--s-5) var(--s-3) var(--s-4);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  min-height: 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 0 var(--s-2);
+  min-width: 0;
+}
+
+.brand-mark {
+  width: 36px;
+  height: 36px;
+}
+
+.brand-text {
+  display: grid;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.brand-name {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.brand-store {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nav {
+  display: grid;
+  gap: var(--s-1);
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  min-height: var(--control);
+  padding: 0 var(--s-3);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius);
+  color: var(--text-2);
+  font-weight: 550;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    background-color var(--t-fast) var(--ease),
+    color var(--t-fast) var(--ease);
+}
+
+.nav-item:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.nav-item[aria-current="page"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.sidebar-foot {
+  margin-top: auto;
+  padding: 0 var(--s-3);
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+/* ---------- contenido ---------- */
+
+.content {
+  min-width: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.page {
+  display: grid;
+  gap: var(--s-5);
+  width: 100%;
+  max-width: var(--content-max);
+  margin-inline: auto;
+  padding: var(--s-6) var(--s-6) var(--s-7);
+}
+
+.page-title {
+  font-size: var(--fs-2xl);
+}
+
+.page-lead {
+  margin-top: var(--s-2);
+  color: var(--text-2);
+}
+
+.section {
+  display: grid;
+  gap: var(--s-4);
+}
+
+.section-title {
+  font-size: var(--fs-lg);
+}
+
+.section-hint {
+  margin-top: calc(var(--s-3) * -1);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}

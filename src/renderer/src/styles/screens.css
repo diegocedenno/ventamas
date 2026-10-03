@@ -1,0 +1,171 @@
+/* Estilos de las pantallas del núcleo: Inicio y Ajustes. */
+
+/* ---------- avisos de Inicio ---------- */
+
+.notice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s-4);
+  align-items: start;
+}
+
+.notice-icon {
+  margin-top: 2px;
+  color: var(--accent);
+}
+
+.notice-icon--ok {
+  color: var(--success);
+}
+
+.notice-title {
+  font-size: var(--fs-lg);
+}
+
+.notice-body {
+  margin-top: var(--s-2);
+  color: var(--text-2);
+  max-width: 62ch;
+}
+
+.notice .btn {
+  margin-top: var(--s-4);
+}
+
+/* ---------- nombre de la tienda ---------- */
+
+.store-form {
+  display: grid;
+  gap: var(--s-4);
+  max-width: 460px;
+}
+
+.store-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  min-height: var(--control);
+}
+
+/* ---------- selector de tema ---------- */
+
+.themes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--s-3);
+}
+
+.theme {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    border-color var(--t-fast) var(--ease),
+    background-color var(--t-fast) var(--ease);
+}
+
+.theme:hover {
+  background: var(--surface-2);
+}
+
+.theme:has(input:checked) {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.theme:has(input:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.theme-preview {
+  display: grid;
+  grid-template-columns: 30% 1fr;
+  height: 64px;
+  border: 1px solid;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.theme-preview-side,
+.theme-preview-main {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  padding: 8px 6px;
+}
+
+.theme-preview-side {
+  border-right: 1px solid;
+}
+
+.theme-preview i {
+  display: block;
+  height: 5px;
+  border-radius: 3px;
+}
+
+.theme-preview-side i {
+  opacity: 0.55;
+}
+
+.theme-preview-side i:first-child {
+  opacity: 1;
+}
+
+.theme-preview-main i:first-child {
+  width: 55%;
+}
+
+.theme-preview-main i:last-child {
+  width: 34%;
+  height: 12px;
+  margin-top: 12px;
+  border-radius: 4px;
+}
+
+.theme-name {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2);
+  padding: 0 var(--s-1);
+  font-size: var(--fs-sm);
+  font-weight: 550;
+}
+
+.theme-tag {
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  color: var(--text-2);
+}
+
+/* ---------- acerca de ---------- */
+
+.facts {
+  display: grid;
+  gap: var(--s-3);
+  margin: 0;
+}
+
+.facts > div {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: var(--s-4);
+}
+
+.facts dt {
+  color: var(--text-2);
+}
+
+.facts dd {
+  margin: 0;
+}
+
+.facts-path {
+  overflow-wrap: anywhere;
+}
