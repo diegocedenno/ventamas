@@ -1,7 +1,13 @@
 {
   "nucleo/0001_ajustes": "3788b3db2f00c2c6",
+  "nucleo/0002_bienvenida": "730f41cc78970433",
   "monedas/0001_tasas": "db1987ca25698b1b",
+  "impuestos/0001_impuestos": "586575ef6a675ca9",
   "inventario/0001_productos": "d1e9892f06887920",
+  "inventario/0002_catalogo": "1f83fceec71c9ba0",
   "caja/0001_caja": "514973531ebf3298",
-  "ventas/0001_ventas": "d6112bae82fc3a65"
+  "clientes/0001_clientes": "74afe379dd5b3814",
+  "ventas/0001_ventas": "d6112bae82fc3a65",
+  "ventas/0002_cliente_descuentos_impuestos": "0c2502c96d772481",
+  "facturacion/0001_facturas": "02fab5cd1a126fcd"
 }

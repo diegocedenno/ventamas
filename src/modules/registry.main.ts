@@ -1,6 +1,9 @@
 import { sortByDependencies } from "@shared/modules";
 import type { MainModule } from "../main/modules";
 import { cajaModule } from "./caja/main";
+import { clientesModule } from "./clientes/main";
+import { facturacionModule } from "./facturacion/main";
+import { impuestosModule } from "./impuestos/main";
 import { inventarioModule } from "./inventario/main";
 import { monedasModule } from "./monedas/main";
 import { nucleoModule } from "./nucleo/main";
@@ -11,7 +14,10 @@ import { ventasModule } from "./ventas/main";
 export const mainModules: MainModule[] = sortByDependencies([
   nucleoModule,
   monedasModule,
+  impuestosModule,
   inventarioModule,
   cajaModule,
+  clientesModule,
   ventasModule,
+  facturacionModule,
 ]);

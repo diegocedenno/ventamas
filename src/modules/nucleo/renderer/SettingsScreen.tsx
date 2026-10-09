@@ -1,36 +1,69 @@
 import { FolderOpen } from "lucide-react";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { APP } from "@shared/api";
-import { STORE_NAME_MAX } from "@shared/settings";
-import { THEMES, type ThemeId } from "@shared/themes";
+import { CURRENCIES } from "@shared/money";
+import { ADDRESS_MAX, LEGAL_NAME_MAX, PHONE_MAX, STORE_NAME_MAX, TAX_ID_MAX, type SettingKey } from "@shared/settings";
+import { hasValidCheck, parseTaxId } from "@shared/taxid";
+import type { ThemeId } from "@shared/themes";
+import { Field } from "../../../renderer/src/components/Fields";
 import { call } from "../../../renderer/src/lib/ipc";
 import { useApp } from "../../../renderer/src/state";
 import { t } from "./texts";
+import { ThemePicker } from "./ThemePicker";
 
 type Feedback = { kind: "ok" | "error"; text: string } | null;
 
+const STORE_TAB = "tienda";
+const ABOUT_TAB = "acerca";
+
+/** Ajustes, por secciones: la tienda, lo que añade cada módulo y los datos de la aplicación. */
 export function SettingsScreen() {
-  const { settingsSections } = useApp();
+  const { settingsSections, params } = useApp();
+  const [tab, setTab] = useState(params.tab ?? STORE_TAB);
+  const tabs = [
+    { id: STORE_TAB, label: t("settings.tab.store") },
+    ...settingsSections.map((section) => ({ id: section.id, label: section.label })),
+    { id: ABOUT_TAB, label: t("settings.tab.about") },
+  ];
+  const Section = settingsSections.find((section) => section.id === tab)?.component;
+
   return (
     <div className="page">
       <header>
         <h1 className="page-title">{t("settings.title")}</h1>
       </header>
-      <StoreSection />
-      <ThemeSection />
+      <div className="tabs" role="tablist" aria-label={t("settings.tabs")}>
+        {tabs.map((item) => (
+          <button key={item.id} type="button" className="tab" role="tab" aria-selected={tab === item.id} onClick={() => setTab(item.id)}>
+            {item.label}
+          </button>
+        ))}
+      </div>
+      {tab === STORE_TAB && (
+        <>
+          <StoreSection />
+          <ThemeSection />
+        </>
+      )}
       {/* Cada módulo añade aquí sus propios ajustes. */}
-      {settingsSections.map(({ id, component: Section }) => (
-        <Section key={id} />
-      ))}
-      <AboutSection />
+      {Section && <Section />}
+      {tab === ABOUT_TAB && <AboutSection />}
     </div>
   );
 }
 
+const STORE_KEYS = ["store.name", "store.address", "store.phone", "store.taxId", "store.legalName"] as const satisfies readonly SettingKey[];
+type StoreKey = (typeof STORE_KEYS)[number];
+
 function StoreSection() {
   const { settings, saveSetting } = useApp();
-  const saved = settings["store.name"];
-  const [name, setName] = useState(saved);
+  const [values, setValues] = useState<Record<StoreKey, string>>(() => ({
+    "store.name": settings["store.name"],
+    "store.address": settings["store.address"],
+    "store.phone": settings["store.phone"],
+    "store.taxId": settings["store.taxId"],
+    "store.legalName": settings["store.legalName"],
+  }));
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [saving, setSaving] = useState(false);
   const id = useId();
@@ -38,51 +71,78 @@ function StoreSection() {
 
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
+  const tidy = (text: string) => text.trim().replace(/\s+/g, " ");
+  const changed = STORE_KEYS.filter((key) => tidy(values[key]) !== settings[key]);
+  const taxId = parseTaxId(values["store.taxId"]);
+  const badCheck = taxId !== null && !hasValidCheck(taxId);
+
+  const set = (key: StoreKey) => (text: string) => {
+    setValues((current) => ({ ...current, [key]: text }));
+    setFeedback(null);
+  };
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     setSaving(true);
-    const error = await saveSetting("store.name", name);
-    setSaving(false);
     window.clearTimeout(timer.current);
-    if (error) {
-      setFeedback({ kind: "error", text: error });
-      return;
+    for (const key of changed) {
+      const value = key === "store.taxId" ? (taxId?.text ?? values[key]) : values[key];
+      const error = await saveSetting(key, value);
+      if (error) {
+        setSaving(false);
+        setFeedback({ kind: "error", text: error });
+        return;
+      }
     }
-    setName((current) => current.trim().replace(/\s+/g, " "));
+    setSaving(false);
+    setValues((current) => {
+      const next = { ...current };
+      for (const key of STORE_KEYS) next[key] = tidy(current[key]);
+      if (taxId) next["store.taxId"] = taxId.text;
+      return next;
+    });
     setFeedback({ kind: "ok", text: t("settings.saved") });
     timer.current = window.setTimeout(() => setFeedback(null), 4000);
   }
+
+  const input = (key: StoreKey, max: number, placeholder?: string) => (props: { id: string; "aria-describedby": string | undefined }) => (
+    <input
+      {...props}
+      className="input"
+      value={values[key]}
+      maxLength={max}
+      placeholder={placeholder}
+      autoComplete="off"
+      spellCheck={false}
+      onChange={(event) => set(key)(event.target.value)}
+    />
+  );
 
   return (
     <section className="card section" aria-labelledby={`${id}-title`}>
       <h2 className="section-title" id={`${id}-title`}>
         {t("settings.store.title")}
       </h2>
+      <p className="section-hint">{t("settings.store.hint")}</p>
       <form className="store-form" onSubmit={submit}>
-        <div className="field">
-          <label className="field-label" htmlFor={`${id}-name`}>
-            {t("settings.store.name")}
-          </label>
-          <input
-            className="input"
-            id={`${id}-name`}
-            value={name}
-            maxLength={STORE_NAME_MAX}
-            placeholder={t("settings.store.name.placeholder")}
-            aria-describedby={`${id}-hint`}
-            autoComplete="off"
-            spellCheck={false}
-            onChange={(event) => {
-              setName(event.target.value);
-              setFeedback(null);
-            }}
-          />
-          <p className="field-hint" id={`${id}-hint`}>
-            {t("settings.store.name.hint", { max: STORE_NAME_MAX })}
-          </p>
+        <Field label={t("settings.store.name")} hint={t("settings.store.name.hint", { max: STORE_NAME_MAX })}>
+          {input("store.name", STORE_NAME_MAX, t("settings.store.name.placeholder"))}
+        </Field>
+        <Field label={t("settings.store.address")}>{input("store.address", ADDRESS_MAX, t("settings.store.address.placeholder"))}</Field>
+        <div className="form-grid">
+          <Field label={t("settings.store.phone")}>{input("store.phone", PHONE_MAX, t("settings.store.phone.placeholder"))}</Field>
+          <Field
+            label={t("settings.store.taxId")}
+            hint={badCheck ? <span className="field-warning">{t("settings.store.taxId.check")}</span> : undefined}
+          >
+            {input("store.taxId", TAX_ID_MAX, t("settings.store.taxId.placeholder"))}
+          </Field>
         </div>
+        <Field label={t("settings.store.legalName")} hint={t("settings.store.legalName.hint")}>
+          {input("store.legalName", LEGAL_NAME_MAX)}
+        </Field>
         <div className="store-actions">
-          <button type="submit" className="btn btn--primary" disabled={saving || name.trim() === saved}>
+          <button type="submit" className="btn btn--primary" disabled={saving || changed.length === 0}>
             {t("settings.save")}
           </button>
           <p className={`message message--${feedback?.kind ?? "ok"}`} role="status">
@@ -109,39 +169,7 @@ function ThemeSection() {
         {t("settings.theme.title")}
       </h2>
       <p className="section-hint">{t("settings.theme.hint")}</p>
-      <div className="themes" role="radiogroup" aria-labelledby={`${id}-title`}>
-        {THEMES.map((theme) => (
-          <label key={theme.id} className="theme">
-            <input
-              className="sr-only"
-              type="radio"
-              name="tema"
-              value={theme.id}
-              checked={settings["ui.theme"] === theme.id}
-              onChange={() => void choose(theme.id)}
-            />
-            <span
-              className="theme-preview"
-              aria-hidden="true"
-              style={{ background: theme.colors.bg, borderColor: theme.colors.border }}
-            >
-              <span className="theme-preview-side" style={{ background: theme.colors.surface, borderColor: theme.colors.border }}>
-                <i style={{ background: theme.colors.accent }} />
-                <i style={{ background: theme.colors.text2 }} />
-                <i style={{ background: theme.colors.text2 }} />
-              </span>
-              <span className="theme-preview-main">
-                <i style={{ background: theme.colors.text }} />
-                <i style={{ background: theme.colors.accent }} />
-              </span>
-            </span>
-            <span className="theme-name">
-              {theme.name}
-              {theme.scheme === "dark" && <span className="theme-tag">{t("settings.theme.dark")}</span>}
-            </span>
-          </label>
-        ))}
-      </div>
+      <ThemePicker value={settings["ui.theme"]} onChange={(theme) => void choose(theme)} labelledBy={`${id}-title`} />
       {error && (
         <p className="message message--error" role="alert">
           {error}
@@ -152,7 +180,7 @@ function ThemeSection() {
 }
 
 function AboutSection() {
-  const { info } = useApp();
+  const { info, settings } = useApp();
   const id = useId();
 
   return (
@@ -164,6 +192,12 @@ function AboutSection() {
         <div>
           <dt>{t("settings.about.version")}</dt>
           <dd className="num">{info.version}</dd>
+        </div>
+        <div>
+          <dt>{t("settings.currency.title")}</dt>
+          <dd>
+            {CURRENCIES[settings["store.currency"]].name} <span className="muted">· {t("settings.currency.hint")}</span>
+          </dd>
         </div>
         <div>
           <dt>{t("settings.about.license")}</dt>

@@ -3,7 +3,7 @@ import { DEFAULT_SETTINGS, SettingError } from "@shared/settings";
 import { openDatabase, type Db } from "../../../main/db/database";
 import { runMigrations } from "../../../main/db/migrate";
 import { migrations } from "./migrations";
-import { readSettings, writeSetting } from "./settings";
+import { changeSetting, finishSetup, readSettings, writeSetting } from "./settings";
 
 let db: Db;
 
@@ -50,5 +50,54 @@ describe("ajustes", () => {
     insert.run("store.name", "{esto no es json", "2026-10-03T00:00:00.000Z");
     insert.run("ajuste.futuro", '"x"', "2026-10-03T00:00:00.000Z");
     expect(readSettings(db)).toEqual(DEFAULT_SETTINGS);
+  });
+});
+
+describe("asistente de bienvenida", () => {
+  it("guarda lo elegido y marca la tienda como configurada", () => {
+    const settings = finishSetup(db, { storeName: " Calzados Altamira ", currency: "VES", theme: "bosque" });
+    expect(settings).toMatchObject({ "store.name": "Calzados Altamira", "store.currency": "VES", "ui.theme": "bosque", "setup.done": true });
+  });
+
+  it("omitirlo deja los valores por defecto", () => {
+    expect(finishSetup(db, undefined)).toEqual({ ...DEFAULT_SETTINGS, "setup.done": true });
+  });
+
+  it("solo se pasa una vez, y un dato no válido no deja nada a medias", () => {
+    expect(() => finishSetup(db, { storeName: "Mi tienda", currency: "BTC", theme: "bosque" })).toThrow(SettingError);
+    expect(readSettings(db)).toEqual(DEFAULT_SETTINGS);
+    finishSetup(db, {});
+    expect(() => finishSetup(db, { storeName: "Otra" })).toThrow(/ya está configurada/);
+  });
+
+  it("la moneda de los precios solo se elige antes de terminar", () => {
+    expect(changeSetting(db, "store.currency", "EUR")["store.currency"]).toBe("EUR");
+    finishSetup(db, {});
+    expect(() => changeSetting(db, "store.currency", "USD")).toThrow(/ya no se cambia/);
+    expect(() => changeSetting(db, "setup.done", false)).toThrow(TypeError);
+    expect(changeSetting(db, "store.phone", "0212 555 00 11")["store.phone"]).toBe("0212 555 00 11");
+  });
+});
+
+describe("datos de la tienda y de facturación", () => {
+  it("limpia y guarda los datos de la tienda", () => {
+    writeSetting(db, "store.legalName", "  Inversiones   Altamira, C.A. ");
+    writeSetting(db, "store.taxId", "j-00124134-5");
+    const settings = writeSetting(db, "store.address", "Av. Principal, Chacao, Caracas");
+    expect(settings).toMatchObject({ "store.legalName": "Inversiones Altamira, C.A.", "store.taxId": "J-00124134-5" });
+  });
+
+  it("valida los ajustes de impuestos y facturas", () => {
+    expect(writeSetting(db, "tax.enabled", true)["tax.enabled"]).toBe(true);
+    expect(writeSetting(db, "invoice.paper", "media-carta")["invoice.paper"]).toBe("media-carta");
+    expect(writeSetting(db, "invoice.series", "A")["invoice.series"]).toBe("A");
+    expect(() => writeSetting(db, "tax.enabled", "sí")).toThrow(SettingError);
+    expect(writeSetting(db, "invoice.mode", "forma-libre")["invoice.mode"]).toBe("forma-libre");
+    expect(() => writeSetting(db, "invoice.mode", "fiscal")).toThrow(SettingError);
+    expect(() => writeSetting(db, "invoice.paper", "recibo")).toThrow(SettingError);
+    expect(() => writeSetting(db, "invoice.series", "serie")).toThrow(SettingError);
+    expect(() => writeSetting(db, "invoice.start", 0)).toThrow(SettingError);
+    expect(() => writeSetting(db, "invoice.top", 500)).toThrow(SettingError);
+    expect(() => writeSetting(db, "invoice.regime", "especial")).toThrow(SettingError);
   });
 });
