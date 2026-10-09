@@ -1,7 +1,7 @@
 {
   "name": "ventamas",
   "productName": "Ventamas",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Punto de venta, inventario y clientes para comercios pequeños. Funciona sin internet y cobra en varias monedas.",
   "author": "Diego Cedeño",
   "license": "AGPL-3.0-only",
