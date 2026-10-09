@@ -429,6 +429,7 @@
 
 .stat {
   display: grid;
+  align-content: start;
   gap: var(--s-1);
   padding: var(--s-4);
   background: var(--surface);
@@ -457,4 +458,227 @@
   font-weight: 550;
   line-height: 1.6;
   color: var(--text-2);
+}
+
+/* ---------- elegir entre pocas opciones ---------- */
+
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  justify-self: start;
+}
+
+.segmented-option {
+  cursor: pointer;
+}
+
+.segmented-option > span {
+  display: inline-flex;
+  align-items: center;
+  min-height: calc(var(--control) - 6px);
+  padding: 0 var(--s-4);
+  border-radius: calc(var(--radius) - 3px);
+  color: var(--text-2);
+  font-weight: 550;
+  transition:
+    background-color var(--t-fast) var(--ease),
+    color var(--t-fast) var(--ease);
+}
+
+.segmented-option:hover > span {
+  color: var(--text);
+}
+
+.segmented-option > input:checked + span {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.segmented-option > input:focus-visible + span {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.segmented-option > input:disabled + span {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 36px;
+  padding: 0 var(--s-3);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  font-size: var(--fs-sm);
+  font-weight: 550;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    background-color var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease),
+    color var(--t-fast) var(--ease);
+}
+
+.chip:hover {
+  background: var(--surface-2);
+}
+
+.chip[aria-pressed="true"] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.chip:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.chip-count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+/* ---------- pestañas ---------- */
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  min-height: var(--control);
+  padding: 0 var(--s-4);
+  margin-bottom: -1px;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--text-2);
+  font-weight: 550;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    color var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease);
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab[aria-selected="true"] {
+  border-bottom-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ---------- varios ---------- */
+
+.note--ok {
+  background: var(--accent-soft);
+  color: var(--text);
+  font-weight: 400;
+}
+
+.note--warn {
+  background: var(--surface-2);
+  color: var(--warning);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.row--between {
+  justify-content: space-between;
+}
+
+.stack {
+  display: grid;
+  gap: var(--s-3);
+}
+
+.select {
+  appearance: none;
+  padding-right: calc(var(--s-3) + 24px);
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-2) 50%), linear-gradient(135deg, var(--text-2) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 50%,
+    calc(100% - 13px) 50%;
+  background-size:
+    5px 5px,
+    5px 5px;
+  background-repeat: no-repeat;
+}
+
+textarea.input {
+  min-height: 88px;
+  padding: var(--s-3);
+  resize: vertical;
+}
+
+.stat--button {
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: border-color var(--t-fast) var(--ease);
+}
+
+.stat--button:hover {
+  border-color: var(--border-strong);
+}
+
+.stat--button[aria-pressed="true"] {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.stat-note {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  white-space: normal;
+}
+
+.subsection-title {
+  font-size: var(--fs-md);
+  font-weight: 650;
+}
+
+/* Un ajuste que se enciende o se apaga, con su nombre a la izquierda. */
+.setting-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  min-height: var(--control);
+  font-weight: 550;
+  cursor: pointer;
+}
+
+/* Aviso que no impide guardar: el dato se ve raro, pero puede estar bien. */
+.field-warning {
+  color: var(--warning);
+  font-weight: 550;
 }

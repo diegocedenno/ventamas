@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { Welcome } from "@modules/nucleo/renderer";
 import { Logo } from "./components/Logo";
 import { t } from "./i18n/es";
 import type { Screen } from "./modules";
@@ -20,6 +21,8 @@ export function App() {
     main.current?.focus();
   }, [screen]);
 
+  // Una tienda nueva pasa primero por el asistente de bienvenida.
+  if (!settings["setup.done"]) return <Welcome />;
   if (!current) return null;
   const Current = current.component;
 

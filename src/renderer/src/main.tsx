@@ -15,10 +15,11 @@ applyTheme(window.ventamas.boot.settings["ui.theme"]);
 
 const screens = rendererModules.flatMap((module) => module.screens).sort((a, b) => a.order - b.order);
 const settingsSections = rendererModules.flatMap((module) => module.settings ?? []).sort((a, b) => a.order - b.order);
+const slots = rendererModules.flatMap((module) => module.slots ?? []).sort((a, b) => a.order - b.order);
 
 createRoot(document.getElementById("root") as HTMLElement).render(
   <StrictMode>
-    <AppProvider screens={screens} settingsSections={settingsSections}>
+    <AppProvider screens={screens} settingsSections={settingsSections} slots={slots}>
       <PrintProvider>
         <App />
       </PrintProvider>

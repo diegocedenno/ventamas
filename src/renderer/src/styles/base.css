@@ -151,6 +151,13 @@ svg {
   border: 0;
 }
 
+/* Un control oculto a la vista se coloca dentro de su etiqueta. Sin esto quedaría colocado
+   respecto a la ventana, fuera de la zona que desplaza, y al enfocarlo se movería la
+   página entera. */
+label:has(> .sr-only) {
+  position: relative;
+}
+
 .num {
   font-variant-numeric: tabular-nums;
 }
