@@ -2,10 +2,10 @@
 
 | | |
 |---|---|
-| **Versión del documento** | 0.1 (borrador para revisión) |
-| **Fecha** | 3 de octubre de 2026 |
+| **Versión del documento** | 0.2 |
+| **Fecha** | 9 de octubre de 2026 (primera versión: 3 de octubre de 2026) |
 | **Autor** | Diego Cedeño, con Claude |
-| **Estado** | Alcance acordado en entrevista; propuesta técnica pendiente de validar |
+| **Estado** | Alcance acordado en entrevista y ampliado en la versión 0.3 (apartado 6.14) |
 | **Investigación de base** | [investigacion.md](investigacion.md) |
 
 Las decisiones marcadas **[Acordado]** salieron de la entrevista de alcance. Las marcadas **[Propuesta]** son
@@ -71,12 +71,14 @@ monedas y simplicidad. El detalle y las fuentes están en [investigacion.md](inv
 | Tipo | Estado | Notas |
 |---|---|---|
 | **Ropa y calzado** | Primera versión, resuelto a fondo **[Acordado]** | Tallas, colores, cambios, apartados. |
-| **Tienda general** | Primera versión **[Propuesta]** | El mismo núcleo sin tallas ni colores. No cuesta trabajo adicional. |
+| **Otros comercios de mostrador** | Hecho en la 0.3 **[Acordado]** | 25 rubros con sus categorías y variantes: celulares, ferretería, repuestos, abasto, licorería, farmacia, papelería, hogar, mascotas y más. |
+| **Servicios** | Hecho en la 0.3 **[Acordado]** | Peluquería, estética, reparaciones, costura, lavandería, copias, taller: sin existencias, con modalidades y precio abierto. |
 | **Emprendimiento que vende por WhatsApp** | Posterior **[Acordado]** | Necesita teléfono como equipo principal y catálogo para compartir. |
-| **Comida preparada** | Posterior, como módulo propio **[Acordado]** | Pedidos para llevar o en mesa, productos con ingredientes. |
+| **Comida preparada** | Posterior, como módulo propio **[Acordado]** | Pedidos para llevar o en mesa, productos con ingredientes. Hoy puede vender por producto, sin mesas ni recetas. |
 
-Al iniciar por primera vez, Ventamas pregunta el tipo de comercio y activa las opciones que le corresponden.
-**[Acordado]**
+Al iniciar por primera vez, Ventamas pregunta qué vende la tienda y carga las categorías que le corresponden.
+**[Acordado]** Lo que todavía no cubre: la venta por peso o por metro, que necesitan los abastos, las charcuterías
+y parte de las ferreterías ([decisión 0006](decisiones/0006-catalogo-por-rubro.md)).
 
 ## 5. Principios del producto
 
@@ -215,20 +217,46 @@ Todo este apartado está **[Acordado]**, salvo donde se indica.
   contribuir.
 - **AYU-05** El manual de la aplicación y el del sitio web salen del mismo contenido, para que no se desincronicen.
 
+### 6.14 Lo que la versión 0.3 añadió al alcance
+
+Pedido el 8 de octubre de 2026 y construido tras una segunda ronda de investigación
+([apartado 7 de la investigación](investigacion.md)). **[Acordado]**
+
+- **CAT-01** Catálogo incluido de tipos de comercio: al elegir uno o varios, se cargan sus categorías, cada una con
+  las variantes que suelen tener sus productos y sus valores habituales. Se ajusta después.
+- **CAT-02** Variantes con el nombre que haga falta (talla, capacidad, presentación, sabor), hasta dos por
+  producto, y precio propio por pieza.
+- **SER-01** Servicios: sin existencias, con modalidades (para quién, tipo de vehículo) y, si hace falta, con el
+  precio abierto: se escribe al cobrar.
+- **VEN-11** Descuento por línea (porcentaje o monto) y descuento a toda la venta.
+- **VEN-12** Venta en espera: se guarda a medio armar para atender a otra persona y se retoma después.
+- **VEN-13** Productos a la vista, por categoría, para vender con un toque; montos habituales al cobrar en
+  efectivo; vuelto propuesto en billetes enteros de la divisa y el resto en bolívares.
+- **VEN-14** Historial de ventas por periodo, cliente o número, con su recibo.
+- **IMP-01** Impuestos, apagados por defecto: tasas por producto, precios con el impuesto incluido o aparte, y
+  desglose por tasa en la venta y en el recibo. Sustituye al supuesto MON-08.
+- **FAC-01** Facturación, apagada por defecto, en dos modos: anotar en cada venta la factura emitida por otro
+  medio, o imprimirla sobre formas libres de una imprenta autorizada. Con anulación y un auxiliar del libro de
+  ventas. Qué hace y qué no, y por qué: [decisión 0008](decisiones/0008-facturacion.md).
+- **INV-07** Movimientos de existencias con motivo, historial por producto, existencia mínima con lista por
+  reponer, costo promedio al recibir mercancía y códigos propios. Completa INV-03, INV-04 e INV-05.
+- **CAJ-05** Corte parcial sin cerrar la caja, conteo por billetes, conteo a ciegas opcional y motivos habituales.
+
 ## 7. Fuera de la primera versión
 
 En el orden en que se propone abordarlos después:
 
-1. Descuentos y promociones.
-2. Impresión de etiquetas con código de barras.
-3. Compras a proveedores y cuentas por pagar.
-4. Gastos y finanzas básicas.
-5. Teléfono del dueño para consultar ventas e inventario.
-6. Varias cajas sincronizadas.
-7. Catálogo para compartir por WhatsApp.
-8. Comida preparada.
-9. Módulos fiscales por país, empezando por las impresoras fiscales venezolanas.
-10. Videos tutoriales.
+1. Venta por peso o por metro (cantidades con decimales).
+2. Promociones (dos por uno, precios por temporada). Los descuentos ya existen.
+3. Impresión de etiquetas con código de barras.
+4. Compras a proveedores y cuentas por pagar.
+5. Gastos y finanzas básicas.
+6. Teléfono del dueño para consultar ventas e inventario.
+7. Varias cajas sincronizadas.
+8. Catálogo para compartir por WhatsApp.
+9. Comida preparada.
+10. Conexión con máquinas fiscales e imprentas digitales venezolanas; después, facturación de otros países.
+11. Videos tutoriales.
 
 ## 8. Flujo de referencia: la venta ideal
 
@@ -337,9 +365,10 @@ Sin fechas, porque no hay fecha fija. **[Acordado]** Cada fase termina en algo q
 |---|---|---|
 | **0. Cimientos** (hecha) | Repositorio, licencia, decisión de Electron, modelo de datos, sistema de diseño con los ocho temas, e instalador generado automáticamente. | Un instalador que abre una aplicación vacía con la marca. |
 | **1. Vender** (hecha) | Productos con tallas y colores, venta con cobro en varias monedas, tasas, recibo, y apertura y cierre de caja. | Una tienda puede vender y cerrar caja. Primera versión de prueba pública. |
-| **2. Clientes y crédito** | Clientes, apartados, fiado, abonos, saldo a favor, cambios y devoluciones. | Reemplaza el cuaderno de fiado. |
-| **3. Control** | Inventario completo, reportes, usuarios y permisos, respaldo y restauración. | El dueño puede dejar la tienda en manos de un vendedor. |
-| **4. Primera impresión** | Asistente inicial, marca, tienda de demostración, guía paso a paso, manual y sitio web. | Versión 1.0. |
+| **1.5 Más comercios** (hecha, versión 0.3) | Catálogo por rubro, variantes con nombre, servicios, clientes, descuentos, ventas en espera, impuestos, facturación, historial, asistente inicial, y mejoras de inventario y caja. | Sirve a más tipos de comercio, incluidos los de servicios, y a quien necesita facturar. |
+| **2. Clientes y crédito** | Apartados, fiado, abonos, saldo a favor, cambios, devoluciones y anulación de ventas. Los clientes ya existen. | Reemplaza el cuaderno de fiado. |
+| **3. Control** | Reportes, usuarios y permisos, respaldo y restauración, importar productos. | El dueño puede dejar la tienda en manos de un vendedor. |
+| **4. Primera impresión** | Logo de la tienda, tienda de demostración, guía paso a paso, manual y sitio web. El asistente inicial ya existe. | Versión 1.0. |
 
 ### Después de la primera versión
 
@@ -349,7 +378,7 @@ Sin fechas, porque no hay fecha fija. **[Acordado]** Cada fase termina en algo q
 | **2.0 Finanzas básicas** | Compras a proveedores, lo que debo, gastos por categoría, saldos por lugar donde está el dinero, y ganancia del mes. |
 | **3.0 Más equipos** | Teléfono del dueño en la red de la tienda, y luego varias cajas sincronizadas. |
 | **Módulos por tipo de comercio** | Catálogo para WhatsApp y comida preparada. |
-| **Módulos fiscales** | Impresoras fiscales venezolanas, y luego facturación electrónica de otros países, idealmente aportada por la comunidad de cada país. |
+| **Módulos fiscales** | Máquinas fiscales e imprentas digitales venezolanas, y luego facturación electrónica de otros países, idealmente aportada por la comunidad de cada país. Las formas libres y el registro de facturas externas ya existen. |
 
 ### Finanzas básicas, en lenguaje de dueño **[Acordado]**
 
@@ -377,7 +406,9 @@ Sin fechas, porque no hay fecha fija. **[Acordado]** Cada fase termina en algo q
 
 | Riesgo | Por qué importa | Cómo se reduce |
 |---|---|---|
-| **Legal: el recibo no es una factura** | Un comercio obligado a facturar que solo entregue el recibo puede ser sancionado. El régimen del SENIAT está en transición. | Rótulo claro en el recibo y advertencia en el asistente y el manual. El dueño del proyecto acepta este riesgo. **[Acordado]** |
+| **Legal: el recibo no es una factura** | Un comercio obligado a facturar que solo entregue el recibo puede ser sancionado con clausura y multa. El régimen del SENIAT está en transición. | Rótulo claro en el recibo. La facturación explica en pantalla quién está obligado a máquina fiscal, y ofrece anotar en cada venta la factura emitida por otro medio. El dueño del proyecto acepta este riesgo. **[Acordado]** |
+| **Legal: facturar en forma libre sin poder** | Una tienda de ropa, de comida o de belleza que facture en formas libres estando obligada a máquina fiscal incumple igual. | El modo viene apagado, y antes de usarlo la pantalla enumera las tres condiciones de la obligación. Las normas se leyeron en transcripciones, no en Gaceta: hace falta un contador. |
+| **Catálogo sin validar** | Los rubros, categorías, tallas y medidas se escribieron a partir de menús de tiendas y de conocimiento general, no con comerciantes. | Todo se edita en Ajustes; el archivo del catálogo es fácil de corregir y sus reglas tienen pruebas. |
 | **Pérdida de datos** | Todo vive en una sola computadora; un disco dañado borra la tienda. | Respaldo automático diario, aviso cuando falta respaldo, y restauración probada en cada versión. |
 | **Sin tienda piloto** | El proyecto no tendrá comercio piloto; las decisiones de facilidad de uso se validan con las metas del apartado 9 y con lo que reporte la comunidad. **[Acordado]** | Tienda de demostración, pruebas automáticas del flujo de venta y un canal para reportes de usuarios. |
 | **Alcance grande para una persona** | Once áreas en la primera versión. | Fases que terminan en algo usable; publicar versiones de prueba desde la fase 1. |
@@ -388,9 +419,10 @@ Sin fechas, porque no hay fecha fija. **[Acordado]** Cada fase termina en algo q
 
 ## 14. Puntos abiertos
 
-1. **Moneda base.** Se asumió que cada tienda la elige, con el dólar por defecto.
-2. **Impuestos.** Se asumió que la primera versión trabaja con precios finales, sin desglose.
-3. **Fuente de la tasa BCV del euro.** Falta confirmar que alguna API pública la ofrezca.
+1. **Moneda base.** Resuelto en la 0.3: cada tienda la elige en el asistente inicial, con el dólar por defecto, y
+   no se cambia después.
+2. **Impuestos.** Resuelto en la 0.3: apagados por defecto; quien los activa elige si sus precios los incluyen.
+3. **Fuente de la tasa BCV del euro.** Resuelto en la 0.2: el mismo servicio comunitario la ofrece.
 4. **Firma digital del instalador.** Pendiente de decidir según el costo.
 5. **Datos de la investigación por confirmar.** Varias normas y cifras de 2026 vienen de prensa y no de fuente
    primaria; están marcadas en [investigacion.md](investigacion.md).
@@ -400,23 +432,28 @@ comprobación; el recibo no fiscal no requiere validación previa; no habrá tie
 
 ## 15. Siguiente paso
 
-Las fases 0 y 1 están hechas (versión 0.2); sigue la fase 2 (clientes y crédito). Las decisiones técnicas quedan
-registradas en [decisiones/](decisiones/).
+Las fases 0, 1 y 1.5 están hechas (versión 0.3); sigue la fase 2 (crédito, devoluciones y anulaciones). Las
+decisiones técnicas quedan registradas en [decisiones/](decisiones/).
 
-### Lo que la fase 1 dejó para después
+### Lo que queda pendiente de lo ya empezado
 
 | Requisito | Qué falta | Cuándo |
 |---|---|---|
-| VEN-05 | Dejar el vuelto como saldo a favor del cliente. Hoy el vuelto se entrega completo, en una o varias monedas. | Fase 2, con los clientes. |
-| VEN-07 | Asociar la venta a un cliente. | Fase 2. |
-| MON-02 | Elegir la moneda de los precios. Hoy es el dólar; el ajuste existe, pero no hay pantalla para cambiarlo. | Fase 4, en el asistente inicial. |
-| MON-04 | Que solo el dueño cambie las tasas. Hoy no hay usuarios: cualquiera puede. | Fase 3. |
-| COM-03 | Enviar el recibo por WhatsApp. Hoy se puede guardar como PDF y adjuntarlo a mano. | Fase 2, con el teléfono del cliente. |
-| INV-01 | Foto del producto. | Fase 3. |
+| VEN-05 | Dejar el vuelto como saldo a favor del cliente. Hoy el vuelto se entrega completo, en una o varias monedas. | Fase 2. |
+| CLI-03 | Saldo pendiente y saldo a favor por cliente. Hoy el cliente tiene su ficha y sus compras. | Fase 2. |
+| MON-04, USU | Que solo el dueño cambie tasas, dé descuentos o anule facturas. Hoy no hay usuarios: cualquiera puede. | Fase 3. |
+| CAJ-05 | El conteo a ciegas oculta lo esperado al cerrar, pero la pantalla de Caja lo sigue mostrando. | Fase 3, con los permisos. |
+| COM-03 | Enviar el recibo por WhatsApp. Hoy se puede guardar como PDF y adjuntarlo a mano. | Fase 2. |
+| INV-01, CFG-02 | Foto del producto y logo de la tienda. | Fases 3 y 4. |
+| INV-06 | Importar productos desde una hoja de cálculo. | Fase 3. |
+| FAC-01 | Notas de crédito y de débito; conexión con máquinas fiscales e imprentas digitales. | Con las devoluciones, y después. |
+| CAT-02 | Venta por peso o por metro. | Antes de servir bien a abastos y ferreterías. |
 | — | Anular una venta hecha por error. | Fase 2, con las devoluciones. |
 
 ### Pendiente de comprobar con equipos reales
 
 - La aplicación en un equipo modesto (Windows 10, 4 GB de memoria, disco mecánico).
 - La impresión del recibo en una impresora térmica de 58 y de 80 mm. El recibo se revisó como PDF.
+- La impresión de una factura sobre una forma libre real: el espacio del encabezado y los márgenes se ajustan en
+  Ajustes, pero solo se revisó como PDF en tamaño carta.
 - Un lector de códigos de barras real. Se probó tecleando el código y pulsando Enter, que es lo que hace un lector.

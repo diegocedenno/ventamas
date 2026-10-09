@@ -37,6 +37,7 @@ Espaciado en múltiplos de 4 px (`--s-1` a `--s-7`: 4, 8, 12, 16, 24, 32, 48). R
 
 Barra lateral fija de 240 px con la marca, el nombre de la tienda y el menú (Ajustes va al pie); a la derecha, el
 contenido con un ancho máximo de 880 px, o 1180 px en las pantallas con tablas. Ventana mínima de 960 × 600.
+Una tienda nueva ve antes el asistente de bienvenida, a ventana completa.
 
 ## Componentes compartidos
 
@@ -46,20 +47,49 @@ Viven en `src/renderer/src` y los usan todos los módulos.
 |---|---|
 | `Dialog` | Ventana modal sobre el `<dialog>` nativo: atrapa el foco, cierra con Esc y devuelve el foco. Empieza en lo marcado con `data-autofocus`. |
 | `Field`, `AmountInput` | Campo con etiqueta visible, ayuda y error junto al control; campo de monto con el símbolo de su moneda. |
+| `Segmented`, `Chip` | Elegir una entre pocas opciones a la vista (botones de radio de verdad); botón pequeño para filtrar una lista o añadir un valor sugerido con un toque. |
+| `SettingSwitch` | Interruptor de un ajuste: responde al instante y vuelve atrás si no se pudo guardar. |
 | `ErrorNote`, `Empty` | Aviso de error de una operación; estado vacío que explica qué falta y ofrece el siguiente paso. |
-| `Print` | Zona de impresión: dibuja un documento fuera de pantalla, lo mide y lo manda a la impresora o a un PDF. |
+| `Print` | Zona de impresión: dibuja un documento fuera de pantalla, lo mide y lo manda a la impresora o a un PDF. Sirve al rollo del recibo (58 u 80 mm) y a hojas carta y media carta. |
 | `useData`, `useOnce`, `call` | Cargar datos del proceso principal; impedir que un doble clic repita una operación; llamar a un canal. |
-| `kit.css` | Botones, tablas, insignias, interruptores, cifras destacadas y avisos. |
+| `kit.css` | Botones, tablas, insignias, interruptores, pestañas, opciones, cifras destacadas y avisos. |
 
-Cada módulo guarda sus textos (`texts.ts`) y sus estilos propios en su carpeta.
+Cada módulo guarda sus textos (`texts.ts`) y sus estilos propios en su carpeta. Las hojas de estilo de los módulos
+se cargan antes que las compartidas: una regla de módulo que cambie un control compartido (`.btn`, `.input`) debe
+llevar dos clases para ganar.
 
-Los documentos impresos (recibo, cierre de caja) van siempre en negro sobre blanco, sea cual sea el tema: es la
+## Cómo se amplía una pantalla desde otro módulo
+
+Un módulo no importa pantallas de los que dependen de él. Para que la facturación ponga su botón en la ventana de
+una venta, o el inventario su paso en el asistente de bienvenida, cada pantalla anfitriona declara un **lugar** con
+nombre (`ventas.sale`, `nucleo.welcome`) y los demás módulos colocan ahí sus piezas (`slots` en su
+`RendererModule`). Ajustes funciona igual: cada módulo aporta una sección, que aparece como pestaña.
+
+## Reglas de interacción
+
+- **Deshacer antes que confirmar.** Quitar una línea de la venta se deshace durante unos segundos; solo se pide
+  confirmación para lo que no tiene vuelta atrás (vaciar una venta de varias líneas, anular una factura).
+- **Lo opcional se despliega.** Las variantes, el precio por pieza y los ajustes de facturación solo aparecen
+  cuando se activan.
+- **Un aviso no bloquea.** Un RIF cuyo dígito no coincide o una pieza sin existencias se avisan y dejan seguir.
+- **Lo no encontrado no desaparece solo.** Un código que no existe queda escrito y avisado hasta que se corrige.
+
+Los documentos impresos (recibo, cierre de caja, factura) van siempre en negro sobre blanco, sea cual sea el tema: es la
 única excepción a la regla de no usar colores sueltos.
 
 ## Teclado en la pantalla de venta
 
-`F2` lleva al buscador, `F4` a los medios de pago y `F9` cobra. Tras cada paso el foco pasa solo al siguiente:
-del monto al siguiente medio de pago, y de ahí al botón de cobrar cuando la cuenta cuadra.
+| Tecla | Qué hace |
+|---|---|
+| `F2` | Lleva al buscador |
+| `F4` | Lleva a los medios de pago |
+| `F6` | Elige el cliente |
+| `F7` | Descuento a toda la venta |
+| `F8` | Deja la venta en espera (o abre las que hay) |
+| `F9` | Cobra |
+
+La leyenda está siempre a la vista bajo el botón de cobrar. Tras cada paso el foco pasa solo al siguiente: del
+monto al siguiente medio de pago, y de ahí al botón de cobrar cuando la cuenta cuadra.
 
 ## Temas
 

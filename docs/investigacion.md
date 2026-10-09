@@ -229,3 +229,112 @@ PostgreSQL en Coolify · Starlight + driver.js · AGPL-3.0.
 2. **Adopción:** dueños habituados al cuaderno, equipos viejos y competidores con red de distribuidores o capital.
 3. **Soporte:** un proyecto abierto sin ingresos debe seguir cambios fiscales, depender de una API de tasa no
    oficial y atender a usuarios no técnicos.
+
+## 7. Segunda ronda (octubre de 2026): facturar, rubros y buenas prácticas
+
+Fecha: 8 y 9 de octubre de 2026. Tres búsquedas más, antes de construir la versión 0.3: qué exige facturar en
+Venezuela, cómo cargar categorías y variantes por tipo de comercio, y qué hacen bien los puntos de venta
+conocidos. Las marcas son las mismas del principio del documento. Los informes completos no se guardaron: aquí
+queda lo que cambió alguna decisión, con sus fuentes.
+
+### 7.1 Facturar en Venezuela
+
+**Lo que manda** (decisión [0008](decisiones/0008-facturacion.md)):
+
+- **Tres medios válidos y ninguno es «un programa».** Formatos o formas libres de imprenta autorizada, máquina
+  fiscal, e imprenta digital autorizada (Providencia SNAT/2011/00071, arts. 6, 7 y 12) [V, transcripción]
+  ([tugacetaoficial](https://tugacetaoficial.com/leyes/providencia-snat-2011-00071-mediante-la-cual-se-establece-las-normas-generales-de-emision-de-facturas-y-otros-documentos-gaceta-39795-2011-texto/),
+  [IVECOFI](https://tributos.ivecofi.net/informacion/legislacion/providencias/pa-2011-71)).
+- **Máquina fiscal obligatoria (art. 8)** si concurren tres condiciones: ingresos anuales sobre 1.500 UT, mayoría
+  de ventas a consumidores finales, y actividad listada. La lista incluye artículos de cuero, textiles, calzado y
+  prendas de vestir; belleza y estética; lavado de vehículos; estacionamientos; fotocopiado e impresión; y comidas
+  y bebidas (estas, sin importar los ingresos) [V, transcripción]. La UT vale Bs 43 desde junio de 2025
+  ([Acceso a la Justicia](https://accesoalajusticia.org/reajustado-el-valor-de-la-unidad-tributaria-u-t-a-bs-4300/)):
+  el umbral ronda los 74 dólares al año [I]. Un negocio nuevo queda obligado sin importar ingresos.
+- **Forma libre** (arts. 13, 31 y 44): la imprenta preimprime el número de control, el RIF del emisor y sus propios
+  datos; el sistema imprime la palabra «Factura», el número y el contenido. Una sola página
+  ([Gerencia y Tributos](https://gerenciaytributos.blogspot.com/2021/03/lo-que-debe-contener-una-forma-libre-fiscal.html)).
+- **Contenido** (art. 13, 16 numerales): numeración consecutiva, fecha de ocho dígitos, nombre y RIF o cédula del
+  adquirente, cantidad y monto, `(E)` en lo exento, descuentos, base e impuesto por alícuota, total, y la
+  conversión si la operación fue en divisas (monto, equivalente en bolívares y tipo de cambio). No hay umbral de
+  monto para el consumidor final: debe constar al menos su cédula.
+- **IVA** (Ley de 2020): general 16 %, reducida 8 %, adicional de lujo 15 %. Ropa y calzado no están exentos, y no
+  hay umbral para pequeños comercios: se es contribuyente ordinario desde la primera venta
+  ([texto de la ley](https://docs.cachicamo.app/fiscal/ley-iva-2020)). No se encontró norma que obligue a mostrar
+  los precios con el IVA incluido [NV].
+- **IGTF** (3 %): solo lo perciben los sujetos pasivos especiales
+  ([Forvis Mazars](https://www.forvismazars.com/ve/es/insights/forvis-mazars-insights/designacion-de-los-spe)).
+- **Sanciones** (Código Orgánico Tributario 2020, art. 101): no emitir factura o emitirla por un medio no
+  autorizado, clausura de 10 días y multa; emitir documentos distintos de la factura que informen montos, 5 días y
+  multa ([texto](https://docs.cachicamo.app/fiscal/codigo-organico-tributario-2020)).
+- **Homologación de software**: derogada el 12 de agosto de 2026 sin régimen sustituto
+  ([Acceso a la Justicia](https://accesoalajusticia.org/seniat-permite-el-uso-de-cualquier-sistema-contable/)).
+- **Dígito verificador del RIF**: no hay publicación oficial; el cálculo que usan las librerías conocidas
+  ([python-stdnum](https://raw.githubusercontent.com/arthurdejong/python-stdnum/master/stdnum/ve/rif.py)) coincide
+  con siete RIF reales en las pruebas. Se usa como aviso, nunca como bloqueo: un POS abierto tuvo que desactivarlo
+  porque rechazaba datos reales.
+- **Cómo lo resuelven otros**: ninguno «hace fiscal» el documento por sí solo. Cachicamo ofrece máquina fiscal,
+  imprenta digital o forma libre, y aparte un modo no fiscal que emite «Recibo» con la leyenda NO FISCAL
+  ([documentación](https://docs.cachicamo.app/non-fiscal-mode)); Gálac imprime en forma libre.
+
+**No se pudo confirmar:** el texto oficial de Gaceta (todo viene de transcripciones y boletines); qué régimen
+sustituye a la homologación; la base del IGTF en pagos mixtos; las listas completas de exentos; el valor de la
+letra C en el RIF.
+
+### 7.2 Rubros, categorías y variantes
+
+**Lo que manda** (decisión [0006](decisiones/0006-catalogo-por-rubro.md)):
+
+- **Taxonomías abiertas**: la de Shopify es la única reutilizable sin pedir permiso (MIT), pero tiene 14.606
+  categorías y 8.240 atributos, en español peninsular, y sus atributos son descriptivos, no ejes de variante [V]
+  ([repositorio](https://github.com/Shopify/product-taxonomy)). La de Google no publica licencia
+  ([ayuda](https://support.google.com/merchants/answer/6324436)); GS1 prohíbe redistribuir sin permiso
+  ([términos](https://www.gs1.org/terms-use)).
+- **Casi nadie carga un catálogo por rubro.** El único caso encontrado es Odoo 18, como datos de demostración:
+  tres categorías y los atributos talla, color y talla de zapato para «ropa»
+  ([escenarios](https://github.com/odoo/odoo/tree/18.0/addons/point_of_sale/data/scenarios)). Square usa el tipo
+  de negocio para elegir funciones, no para cargar categorías.
+- **Ejes de variante**: el estándar de hecho son tres (Shopify, Loyverse, Lightspeed, Bind). Ningún caso real
+  obliga a más de dos si se usa un valor combinado («8/256 GB», «34B»).
+- **Servicios**: lo mínimo común es sin existencias, con precio fijo o abierto. Loyverse pide el precio al vender
+  si se deja en blanco ([ayuda](https://help.loyverse.com/help/how-add-items-loyverse-back-office)); Square añade
+  variaciones del servicio.
+- **Venta por peso o por metro**: hace falta en abastos, charcuterías, ferreterías, mercerías y lavanderías.
+  Loyverse y Square lo resuelven con cantidades decimales por artículo
+  ([Loyverse](https://help.loyverse.com/help/how-sell-items-weight)). **Ventamas todavía no lo hace.**
+- **Vocabulario**: franela, chemise, koala, cholas, cauchos, tripa, bombillo, suiche, teipe, tirro, paño, cobija,
+  tetero, creyones, pasapalos y otros están en el Diccionario de americanismos con marca de Venezuela
+  ([ASALE](https://www.asale.org/damer/)) o en menús de tiendas venezolanas (EPA, Farmatodo, Ovejita).
+
+**No se pudo confirmar:** casi todas las tallas y medidas (calzado 35–45, pantalones 28–44, sostenes, anillos,
+cauchos, sacos de alimento). La lista de rubros y categorías es una propuesta: no se validó con comerciantes.
+
+### 7.3 Buenas prácticas de punto de venta
+
+Lo que se aplicó en la 0.3, con su fuente:
+
+| Práctica | De dónde sale |
+|---|---|
+| Cobro exacto de un toque y billetes sugeridos | [Square](https://developer.squareup.com/docs/catalog-api/cookbook/set-quick-amounts) |
+| Descuento por línea y por venta, este sobre lo ya descontado | [Shopify POS](https://help.shopify.com/manual/sell-in-person/transactions/cart/discounts), [Loyverse](https://help.loyverse.com/help/how-apply-discounts-during-sale) |
+| Venta en espera con una tecla y contador visible | [Loyverse](https://help.loyverse.com/help/open-tickets), [Lightspeed](https://x-series-support.lightspeedhq.com/hc/en-us/articles/25534134339867-Sell-screen-keyboard-shortcuts-on-desktop) |
+| Deshacer en vez de confirmar; confirmar solo lo grave | [NN/g](https://www.nngroup.com/articles/confirmation-dialog/) |
+| Mosaicos de productos subordinados al buscador | [Lightspeed](https://x-series-support.lightspeedhq.com/hc/articles/212186378) |
+| Movimiento de existencias con motivo e historial | [Square](https://squareup.com/help/us/en/article/8670-create-and-manage-custom-inventory-adjustment-reasons), [Shopify](https://help.shopify.com/en/manual/products/inventory/managing-inventory-quantities/adjustment-history) |
+| Existencia mínima y lista por reponer; vender sin existencias con aviso | [Loyverse](https://help.loyverse.com/help/low-stocks), [Shopify](https://help.shopify.com/en/manual/products/inventory/getting-started-with-inventory/selling-when-out-of-stock) |
+| Costo promedio ponderado al recibir mercancía | [Odoo](https://www.odoo.com/documentation/master/applications/inventory_and_mrp/inventory/inventory_valuation/cheat_sheet.html) |
+| Margen y recargo a la vista | [Shopify](https://www.shopify.com/blog/markup-vs-margin-whats-the-difference) |
+| Conteo a ciegas y por denominaciones; corte parcial | [Toast](https://doc.toasttab.com/doc/platformguide/adminCashDrawers.html), [Odoo](https://www.odoo.com/documentation/18.0/applications/sales/point_of_sale.html) |
+| Vuelto mixto: divisa en billetes enteros y el resto en bolívares | Práctica venezolana descrita en prensa ([VOA](https://www.vozdeamerica.com/a/venezuela_en-venezuela-se-ha-complicado-dar-el-cambio/6072596.html)) |
+| Asistente corto, sin tutorial de diapositivas | [NN/g](https://www.nngroup.com/articles/mobile-tutorials/) |
+| Impuesto incluido en el precio, extraído por tasa | [Shopify](https://help.shopify.com/en/manual/taxes/include-exclude-taxes) |
+
+Lo que la investigación recomendó y **no** se hizo: sonidos de acierto y error al escanear; importar productos
+desde una hoja de cálculo; conteo físico por partes; edición masiva de precios; redondeo del efectivo como renglón
+aparte; aviso al cerrar la caja si quedan ventas en espera; lista de «primeros pasos».
+
+**No se pudo confirmar:** no se encontraron estudios controlados sobre puntos de venta; varias páginas de
+Lightspeed y de GS1 no se pudieron abrir y sus datos vienen del extracto del buscador. Sobre los códigos propios:
+GS1 reserva los prefijos 200–299 a números de circulación restringida y 040–049 a uso dentro de una empresa
+([prefijos](https://www.gs1.org/prefixes)); Ventamas usa el 20 porque un código que empieza por 0 puede leerse
+como UPC de doce cifras, y esos códigos no deben salir de la tienda.
