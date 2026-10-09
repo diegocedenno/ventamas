@@ -2,7 +2,7 @@
 // datos ni el sistema de archivos: todo pasa por canales con nombre ("ventas:crear").
 // Cada módulo declara los suyos en su archivo api.ts.
 
-import type { ReceiptWidth, Settings } from "./settings";
+import type { InvoicePaper, ReceiptWidth, Settings } from "./settings";
 
 export interface AppInfo {
   version: string;
@@ -41,10 +41,13 @@ export interface PrinterInfo {
   displayName: string;
 }
 
-/** Lo que está en pantalla dentro de la zona de impresión, con su tamaño de papel. */
+/** El rollo del recibo (por su ancho en milímetros) o una hoja. */
+export type Paper = ReceiptWidth | InvoicePaper;
+
+/** Lo que está en pantalla dentro de la zona de impresión, con su papel. */
 export interface PrintJob {
-  width: ReceiptWidth;
-  /** Alto del contenido en milímetros. */
+  paper: Paper;
+  /** Alto del contenido en milímetros. Solo cuenta en el rollo: una hoja tiene su tamaño. */
   height: number;
 }
 

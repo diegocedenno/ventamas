@@ -11,7 +11,7 @@ import { openDatabase, type Db } from "./db/database";
 import { runMigrations } from "./db/migrate";
 import { createLogger } from "./log";
 import type { Handler } from "./modules";
-import { registerPrinting } from "./printing";
+import { documentsDirOf, registerPrinting } from "./printing";
 
 // Carpeta de datos alternativa: la usan las pruebas automáticas para no tocar la tienda real.
 // En desarrollo los datos van a una carpeta aparte de la aplicación instalada.
@@ -76,9 +76,10 @@ function registerIpc(database: Db, dataDir: string): void {
     await shell.openPath(dataDir);
   });
 
-  registerPrinting({ window: () => mainWindow, settings: () => readSettings(database), dataDir, handle });
+  const documentsDir = documentsDirOf(dataDir);
+  registerPrinting({ window: () => mainWindow, settings: () => readSettings(database), documentsDir, handle });
 
-  for (const module of mainModules) module.register({ db: database, dataDir, handle });
+  for (const module of mainModules) module.register({ db: database, dataDir, documentsDir, handle });
 }
 
 function createWindow(database: Db): BrowserWindow {

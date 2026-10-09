@@ -8,6 +8,8 @@ export interface MainContext {
   db: Db;
   /** Carpeta de datos de la tienda. */
   dataDir: string;
+  /** Carpeta donde van los archivos que la persona pide guardar (recibos, libros), a la vista en Documentos. */
+  documentsDir: string;
   /**
    * Registra una operación que la interfaz puede llamar por su canal. Si la operación
    * lanza un UserError, su mensaje llega a la persona; cualquier otro error se anota en
