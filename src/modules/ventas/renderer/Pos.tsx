@@ -1,31 +1,41 @@
-import { History, Minus, Plus, Search, Trash2, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type RefObject } from "react";
-import { money, parseAmount, type CurrencyCode, type RateTable } from "@shared/money";
-import { Dialog } from "../../../renderer/src/components/Dialog";
-import { AmountInput, Empty, ErrorNote } from "../../../renderer/src/components/Fields";
-import { formatMoney, formatTime, plainAmount } from "../../../renderer/src/lib/format";
+import { History, Minus, PauseCircle, Percent, Plus, StickyNote, Trash2, UserRound, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { money, type CurrencyCode, type RateTable } from "@shared/money";
+import { ErrorNote } from "../../../renderer/src/components/Fields";
+import { formatMoney } from "../../../renderer/src/lib/format";
 import { messageOf } from "../../../renderer/src/lib/ipc";
-import { useOnce } from "../../../renderer/src/lib/useOnce";
 import { useData } from "../../../renderer/src/lib/useData";
+import { useOnce } from "../../../renderer/src/lib/useOnce";
 import { useApp } from "../../../renderer/src/state";
 import type { PaymentMethod } from "../../caja/api";
-import { describeVariant, type Product, type Variant } from "../../inventario/api";
-import { inventario } from "../../inventario/renderer/client";
-import { MAX_QUANTITY, PAYMENT_NOTE_MAX, type Sale } from "../api";
+import type { Customer } from "../../clientes/api";
+import { clientes } from "../../clientes/renderer/client";
+import { CustomerPicker } from "../../clientes/renderer/CustomerPicker";
+import { DEFAULT_TAX_CLASS, formatTaxRate, type TaxClass } from "../../impuestos/api";
+import { impuestos } from "../../impuestos/renderer/client";
+import { describeVariant, priceOf, type Product, type Variant } from "../../inventario/api";
+import { MAX_QUANTITY, type Sale } from "../api";
+import { lineDiscount, priceCart, proposeChange, toSaleLines, usableDiscount, type CartLine } from "../cart";
+import type { SaleDiscount } from "../pricing";
 import { amountIn, settle } from "../settlement";
+import { Browse } from "./Browse";
 import { ventas } from "./client";
+import { MoneyEntry } from "./MoneyEntry";
+import {
+  ConfirmDialog,
+  DiscountDialog,
+  LineDialog,
+  NoteDialog,
+  OpenPriceDialog,
+  ParkDialog,
+  ParkedDialog,
+  SessionSales,
+  VariantPicker,
+} from "./PosDialogs";
+import { ProductSearch } from "./ProductSearch";
 import { equivalents, otherCurrencies } from "./Receipt";
 import { SaleDialog } from "./SaleDialog";
 import { t } from "./texts";
-
-interface CartLine {
-  variantId: string;
-  description: string;
-  unitPrice: number;
-  quantity: number;
-  /** Existencias de la pieza cuando se añadió. */
-  stock: number;
-}
 
 interface MoneyDraft {
   key: number;
@@ -42,46 +52,80 @@ interface PosProps {
   sessionId: string;
 }
 
+type Open =
+  | { type: "picker"; product: Product }
+  | { type: "price"; product: Product; variant: Variant }
+  | { type: "line"; key: number }
+  | { type: "discount" }
+  | { type: "customer" }
+  | { type: "note" }
+  | { type: "park" }
+  | { type: "parked" }
+  | { type: "sales" }
+  | { type: "clear" }
+  | null;
+
 let nextKey = 1;
+const percent = new Intl.NumberFormat("es-VE", { maximumFractionDigits: 2 });
+const UNDO_MS = 8000;
 
 /** Toda la venta en una pantalla: buscar, armar la venta, cobrar en varias monedas y dar el vuelto. */
 export function Pos({ currency, table, methods, sessionId }: PosProps) {
-  const { goTo } = useApp();
+  const { settings } = useApp();
+  const taxEnabled = settings["tax.enabled"];
+  const taxIncluded = settings["tax.included"];
+
   const [cart, setCart] = useState<CartLine[]>([]);
+  const [discount, setDiscount] = useState<SaleDiscount | null>(null);
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [note, setNote] = useState("");
   const [payments, setPayments] = useState<MoneyDraft[]>([]);
   // null: el vuelto se propone solo. Una lista: quien cobra lo repartió a mano.
   const [manualChange, setManualChange] = useState<MoneyDraft[] | null>(null);
   const [entry, setEntry] = useState<{ method: PaymentMethod; mode: "pago" | "vuelto" } | null>(null);
-  const [picker, setPicker] = useState<Product | null>(null);
+  const [open, setOpen] = useState<Open>(null);
   const [sale, setSale] = useState<Sale | null>(null);
-  const [showSales, setShowSales] = useState(false);
+  const [removed, setRemoved] = useState<{ line: CartLine; index: number } | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [refresh, setRefresh] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const parked = useData(() => ventas.parked(), []);
+  const taxes = useData<TaxClass[]>(() => (taxEnabled ? impuestos.list() : Promise.resolve([])), [taxEnabled]);
 
   const searchInput = useRef<HTMLInputElement>(null);
   const firstMethod = useRef<HTMLButtonElement>(null);
   const chargeButton = useRef<HTMLButtonElement>(null);
 
-  const total = cart.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);
-
   /* ---------- la cuenta ---------- */
+
+  const taxOf = useCallback(
+    (taxClass: string) => {
+      if (!taxEnabled) return null;
+      const list = taxes.data ?? [];
+      const found = list.find((tax) => tax.id === taxClass) ?? list.find((tax) => tax.id === DEFAULT_TAX_CLASS);
+      return found ? { id: found.id, rate: found.rate } : null;
+    },
+    [taxEnabled, taxes.data]
+  );
+
+  const pricing = useMemo(() => priceCart(cart, discount, taxOf, taxIncluded), [cart, discount, taxOf, taxIncluded]);
+  const total = pricing.total;
 
   const result = useMemo(() => {
     const paid = payments.map((p) => ({ ...p, currency: p.method.currency }));
     const before = settle(money(total, currency), paid, [], table);
 
-    // Vuelto propuesto: en el mismo efectivo con que se pagó de más o, si no, en el de la moneda de los precios.
     let change = manualChange;
     if (change === null) {
-      change = [];
-      if (before.changeDue > 0) {
-        const last = payments.at(-1)?.method;
-        const cash = methods.filter((m) => m.kind === "efectivo");
-        const method = (last?.kind === "efectivo" ? last : undefined) ?? cash.find((m) => m.currency === currency) ?? cash[0];
-        if (method) {
-          change = [{ key: 0, method, amount: amountIn(before.changeValue, method.currency, table), note: "" }];
-        }
-      }
+      change = proposeChange(before.changeValue, payments.at(-1)?.method, methods, currency, table).map((part, index) => ({
+        // Las claves que no son positivas marcan el vuelto propuesto, no escrito a mano.
+        key: -index,
+        method: part.method,
+        amount: part.amount,
+        note: "",
+      }));
     }
     return settle(
       money(total, currency),
@@ -91,7 +135,9 @@ export function Pos({ currency, table, methods, sessionId }: PosProps) {
     );
   }, [total, currency, table, payments, manualChange, methods]);
 
-  const canCharge = cart.length > 0 && result.settled && !busy;
+  // Los impuestos tardan un instante en llegar: hasta entonces no se cobra con una cuenta incompleta.
+  const ready = !taxEnabled || taxes.data !== undefined;
+  const canCharge = cart.length > 0 && result.settled && !busy && ready;
 
   // El foco va siempre a lo siguiente: otro medio de pago o, si la cuenta ya cuadra, el botón de cobrar.
   const focusNext = useCallback(() => {
@@ -113,66 +159,162 @@ export function Pos({ currency, table, methods, sessionId }: PosProps) {
     }
   }, [entry, focusNext]);
 
+  // Lo quitado se puede deshacer durante unos segundos.
+  useEffect(() => {
+    if (!removed) return;
+    const timer = window.setTimeout(() => setRemoved(null), UNDO_MS);
+    return () => window.clearTimeout(timer);
+  }, [removed]);
+
   /* ---------- armar la venta ---------- */
 
-  const addVariant = useCallback((product: Product, variant: Variant) => {
+  const addVariant = useCallback((product: Product, variant: Variant, price?: number) => {
+    const description = describeVariant(product.name, variant);
     setCart((current) => {
-      const existing = current.find((line) => line.variantId === variant.id);
+      // Un producto de precio abierto es una línea nueva cada vez: su precio puede cambiar.
+      const existing = product.openPrice ? undefined : current.find((line) => line.variantId === variant.id);
       if (existing) {
-        return current.map((line) =>
-          line === existing ? { ...line, quantity: Math.min(line.quantity + 1, MAX_QUANTITY) } : line
-        );
+        return current.map((line) => (line === existing ? { ...line, quantity: Math.min(line.quantity + 1, MAX_QUANTITY) } : line));
       }
       return [
         ...current,
         {
+          key: nextKey++,
           variantId: variant.id,
-          description: describeVariant(product.name, variant),
-          unitPrice: product.price,
+          description,
+          kind: product.kind,
+          unitPrice: price ?? priceOf(product, variant),
+          openPrice: product.openPrice,
+          taxClass: product.taxClass,
           quantity: 1,
           stock: variant.stock,
+          discount: null,
         },
       ];
     });
     setError(null);
+    setNotice(null);
+    setRemoved(null);
   }, []);
 
-  const choose = useCallback(
-    (product: Product) => {
-      const only = product.variants.length === 1 ? product.variants[0] : undefined;
-      if (only) addVariant(product, only);
-      else setPicker(product);
+  /** Una pieza ya elegida: va a la venta, salvo que antes haya que escribir su precio. */
+  const take = useCallback(
+    (product: Product, variant: Variant) => {
+      if (product.openPrice) setOpen({ type: "price", product, variant });
+      else {
+        addVariant(product, variant);
+        setOpen(null);
+      }
     },
     [addVariant]
   );
 
-  function setQuantity(variantId: string, quantity: number) {
-    setCart((current) =>
-      quantity < 1
-        ? current.filter((line) => line.variantId !== variantId)
-        : current.map((line) => (line.variantId === variantId ? { ...line, quantity: Math.min(quantity, MAX_QUANTITY) } : line))
-    );
+  const choose = useCallback(
+    (product: Product) => {
+      const only = product.variants.length === 1 ? product.variants[0] : undefined;
+      if (only) take(product, only);
+      else setOpen({ type: "picker", product });
+    },
+    [take]
+  );
+
+  function setQuantity(key: number, quantity: number) {
+    if (quantity < 1) {
+      const index = cart.findIndex((line) => line.key === key);
+      const line = cart[index];
+      if (line) setRemoved({ line, index });
+      setCart((current) => current.filter((item) => item.key !== key));
+      return;
+    }
+    setCart((current) => current.map((line) => (line.key === key ? { ...line, quantity: Math.min(quantity, MAX_QUANTITY) } : line)));
+  }
+
+  function undoRemove() {
+    if (!removed) return;
+    setCart((current) => [...current.slice(0, removed.index), removed.line, ...current.slice(removed.index)]);
+    setRemoved(null);
   }
 
   function reset() {
     setCart([]);
+    setDiscount(null);
+    setCustomer(null);
+    setNote("");
     setPayments([]);
     setManualChange(null);
     setEntry(null);
+    setRemoved(null);
     setError(null);
+  }
+
+  /* ---------- ventas en espera ---------- */
+
+  async function park(label: string) {
+    setOpen(null);
+    setError(null);
+    try {
+      parked.set(
+        await ventas.park({ label, lines: toSaleLines(cart), discount: usableDiscount(cart, discount), customerId: customer?.id ?? null, note })
+      );
+      reset();
+      searchInput.current?.focus();
+    } catch (reason) {
+      setError(messageOf(reason));
+    }
+  }
+
+  async function takeParked(id: string) {
+    setOpen(null);
+    setError(null);
+    try {
+      const resumed = await ventas.takeParked(id);
+      const who = resumed.customerId ? await clientes.get(resumed.customerId).catch(() => null) : null;
+      setCart(
+        resumed.lines.map((line) => ({
+          key: nextKey++,
+          variantId: line.variantId,
+          description: line.description,
+          kind: line.kind,
+          unitPrice: line.unitPrice,
+          openPrice: line.openPrice,
+          taxClass: line.taxClass,
+          quantity: line.quantity,
+          stock: line.stock,
+          discount: line.discount > 0 ? { kind: "amount", value: line.discount } : null,
+        }))
+      );
+      setDiscount(resumed.discount);
+      setCustomer(who);
+      setNote(resumed.note);
+      setPayments([]);
+      setManualChange(null);
+      setNotice(resumed.dropped === 0 ? null : resumed.dropped === 1 ? t("parked.dropped.one") : t("parked.dropped", { count: resumed.dropped }));
+    } catch (reason) {
+      setError(messageOf(reason));
+    }
+    void parked.reload();
+  }
+
+  async function discardParked(id: string) {
+    try {
+      parked.set(await ventas.discardParked(id));
+    } catch (reason) {
+      setError(messageOf(reason));
+    }
   }
 
   /* ---------- cobrar ---------- */
 
-  function addMoney(amount: number, note: string) {
+  function addMoney(amount: number, moneyNote: string) {
     if (!entry) return;
-    const draft: MoneyDraft = { key: nextKey++, method: entry.method, amount, note };
+    const draft: MoneyDraft = { key: nextKey++, method: entry.method, amount, note: moneyNote };
     if (entry.mode === "pago") {
       setPayments((current) => [...current, draft]);
       // Con otro pago, el vuelto vuelve a calcularse solo.
       setManualChange(null);
     } else {
-      setManualChange([...result.change.filter((c) => c.key !== 0), draft]);
+      // El vuelto escrito a mano sustituye al propuesto.
+      setManualChange([...result.change.filter((c) => c.key > 0), draft]);
     }
     setEntry(null);
     setError(null);
@@ -185,7 +327,8 @@ export function Pos({ currency, table, methods, sessionId }: PosProps) {
   }
 
   function removeChange(key: number) {
-    setManualChange(result.change.filter((c) => c.key !== key).map((c) => ({ ...c })));
+    // Lo que queda del vuelto propuesto pasa a ser vuelto escrito a mano, con clave propia.
+    setManualChange(result.change.filter((c) => c.key !== key).map((c) => ({ ...c, key: c.key > 0 ? c.key : nextKey++ })));
     focusNext();
   }
 
@@ -198,12 +341,16 @@ export function Pos({ currency, table, methods, sessionId }: PosProps) {
       setError(null);
       try {
         const registered = await ventas.create({
-          lines: cart.map((line) => ({ variantId: line.variantId, quantity: line.quantity })),
+          lines: toSaleLines(cart),
+          discount: usableDiscount(cart, discount),
+          customerId: customer?.id ?? null,
+          note,
           payments: result.payments.map((p) => ({ methodId: p.method.id, amount: p.amount, note: p.note })),
           change: result.change.map((c) => ({ methodId: c.method.id, amount: c.amount })),
           expectedTotal: total,
         });
         reset();
+        setRefresh((value) => value + 1);
         setSale(registered);
       } catch (reason) {
         setError(messageOf(reason));
@@ -215,22 +362,23 @@ export function Pos({ currency, table, methods, sessionId }: PosProps) {
 
   /* ---------- teclado ---------- */
 
-  const shortcuts = useRef({ charge, canCharge });
-  shortcuts.current = { charge, canCharge };
+  const shortcuts = useRef({ charge, canCharge, hasCart: cart.length > 0, hasParked: (parked.data?.length ?? 0) > 0 });
+  shortcuts.current = { charge, canCharge, hasCart: cart.length > 0, hasParked: (parked.data?.length ?? 0) > 0 };
   useEffect(() => {
     function onKey(event: globalThis.KeyboardEvent) {
       // Con una ventana modal abierta, las teclas son suyas.
       if (document.querySelector("dialog[open]")) return;
-      if (event.key === "F2") {
+      const state = shortcuts.current;
+      const run = (action: () => void) => {
         event.preventDefault();
-        searchInput.current?.focus();
-      } else if (event.key === "F4") {
-        event.preventDefault();
-        firstMethod.current?.focus();
-      } else if (event.key === "F9") {
-        event.preventDefault();
-        if (shortcuts.current.canCharge) void shortcuts.current.charge();
-      }
+        action();
+      };
+      if (event.key === "F2") run(() => searchInput.current?.focus());
+      else if (event.key === "F4") run(() => firstMethod.current?.focus());
+      else if (event.key === "F6") run(() => setOpen({ type: "customer" }));
+      else if (event.key === "F7") run(() => state.hasCart && setOpen({ type: "discount" }));
+      else if (event.key === "F8") run(() => (state.hasCart ? setOpen({ type: "park" }) : state.hasParked && setOpen({ type: "parked" })));
+      else if (event.key === "F9") run(() => state.canCharge && void state.charge());
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -240,9 +388,13 @@ export function Pos({ currency, table, methods, sessionId }: PosProps) {
   const pending = entry?.mode === "pago" ? result.dueValue : result.changeDue > 0 ? result.changeValue : 0n;
   const suggested = entry === null ? 0 : amountIn(pending, entry.method.currency, table);
   const others = otherCurrencies(currency, table);
-  const inOthers = (value: bigint): string =>
-    others.map((code) => formatMoney(amountIn(value, code, table), code)).join(" · ");
+  const inOthers = (value: bigint): string => others.map((code) => formatMoney(amountIn(value, code, table), code)).join(" · ");
   const hasChange = result.change.length > 0 || result.changeDue !== 0;
+  const editing = open?.type === "line" ? cart.find((line) => line.key === open.key) : undefined;
+  const parkedCount = parked.data?.length ?? 0;
+  const general = usableDiscount(cart, discount);
+  const taxName = (id: string) => (taxes.data ?? []).find((tax) => tax.id === id)?.name ?? "";
+  const closeDialog = () => setOpen(null);
 
   return (
     <div className="pos">
@@ -250,49 +402,53 @@ export function Pos({ currency, table, methods, sessionId }: PosProps) {
 
       <section className="pos-main" aria-label={t("cart.col.product")}>
         <div className="pos-top">
-          <ProductSearch inputRef={searchInput} onChoose={choose} onAdd={addVariant} />
-          <button type="button" className="btn" onClick={() => setShowSales(true)}>
-            <History size={20} strokeWidth={1.75} aria-hidden="true" />
-            {t("sessionSales")}
-          </button>
+          <ProductSearch inputRef={searchInput} onChoose={choose} onAdd={take} />
+          <div className="pos-top-actions">
+            {parkedCount > 0 && (
+              <button type="button" className="btn" onClick={() => setOpen({ type: "parked" })}>
+                <PauseCircle size={20} strokeWidth={1.75} aria-hidden="true" />
+                {t("parked", { count: parkedCount })}
+              </button>
+            )}
+            <button type="button" className="btn" onClick={() => setOpen({ type: "sales" })}>
+              <History size={20} strokeWidth={1.75} aria-hidden="true" />
+              {t("sessionSales")}
+            </button>
+          </div>
         </div>
 
-        {cart.length === 0 ? (
-          <div className="card">
-            <Empty
-              title={t("cart.empty.title")}
-              action={
-                <button type="button" className="link" onClick={() => goTo("productos")}>
-                  {t("cart.empty.products")}
-                </button>
-              }
-            >
-              {t("cart.empty.body")}
-            </Empty>
-          </div>
-        ) : (
-          <>
-            <div className="table-wrap">
-              <table className="table cart">
-                <thead>
-                  <tr>
-                    <th>{t("cart.col.product")}</th>
-                    <th>{t("cart.col.qty")}</th>
-                    <th className="right">{t("cart.col.price")}</th>
-                    <th className="right">{t("cart.col.total")}</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {cart.map((line) => (
-                    <tr key={line.variantId}>
+        {notice && (
+          <p className="note note--info" role="status">
+            {notice}
+          </p>
+        )}
+
+        {cart.length > 0 && (
+          <div className="table-wrap">
+            <table className="table cart">
+              <thead>
+                <tr>
+                  <th>{t("cart.col.product")}</th>
+                  <th>{t("cart.col.qty")}</th>
+                  <th className="right">{t("cart.col.total")}</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {cart.map((line) => {
+                  const gross = line.unitPrice * line.quantity;
+                  const off = lineDiscount(line);
+                  return (
+                    <tr key={line.key}>
                       <td>
                         <span className="cart-name">{line.description}</span>
-                        {line.quantity > line.stock && (
-                          <span className="badge badge--warn">
-                            {line.stock > 0 ? t("cart.over", { count: line.stock }) : t("cart.none")}
-                          </span>
-                        )}
+                        <span className="cart-tags">
+                          <span className="cart-unit muted num">{t("cart.each", { price: formatMoney(line.unitPrice, currency) })}</span>
+                          {line.kind === "producto" && line.quantity > line.stock && (
+                            <span className="badge badge--warn">{line.stock > 0 ? t("cart.over", { count: line.stock }) : t("cart.none")}</span>
+                          )}
+                          {off > 0 && <span className="badge badge--accent num">{t("cart.discount", { amount: formatMoney(off, currency) })}</span>}
+                        </span>
                       </td>
                       <td>
                         <span className="stepper">
@@ -300,50 +456,152 @@ export function Pos({ currency, table, methods, sessionId }: PosProps) {
                             type="button"
                             className="icon-btn"
                             aria-label={t("cart.less", { item: line.description })}
-                            onClick={() => setQuantity(line.variantId, line.quantity - 1)}
+                            onClick={() => setQuantity(line.key, line.quantity - 1)}
                           >
                             <Minus size={18} strokeWidth={2} aria-hidden="true" />
                           </button>
-                          <span className="stepper-value num" aria-live="polite">
-                            {line.quantity}
-                          </span>
+                          <input
+                            className="stepper-value num"
+                            aria-label={t("cart.qty", { item: line.description })}
+                            inputMode="numeric"
+                            autoComplete="off"
+                            value={line.quantity}
+                            onFocus={(event) => event.target.select()}
+                            onChange={(event) => {
+                              const typed = Number(event.target.value.replace(/\D/g, ""));
+                              // Borrar el número no quita la línea: para eso está la papelera.
+                              if (typed >= 1) setQuantity(line.key, typed);
+                            }}
+                          />
                           <button
                             type="button"
                             className="icon-btn"
                             aria-label={t("cart.more", { item: line.description })}
-                            onClick={() => setQuantity(line.variantId, line.quantity + 1)}
+                            onClick={() => setQuantity(line.key, line.quantity + 1)}
                           >
                             <Plus size={18} strokeWidth={2} aria-hidden="true" />
                           </button>
                         </span>
                       </td>
-                      <td className="right num">{formatMoney(line.unitPrice, currency)}</td>
-                      <td className="right num cart-total">{formatMoney(line.unitPrice * line.quantity, currency)}</td>
-                      <td className="cart-remove">
+                      <td className="right num cart-total">
+                        {off > 0 && <s className="cart-before">{formatMoney(gross, currency)}</s>}
+                        {formatMoney(gross - off, currency)}
+                      </td>
+                      <td className="cart-actions">
+                        <button
+                          type="button"
+                          className="icon-btn"
+                          aria-label={t("cart.edit", { item: line.description })}
+                          title={t("line.discount")}
+                          onClick={() => setOpen({ type: "line", key: line.key })}
+                        >
+                          <Percent size={18} strokeWidth={1.75} aria-hidden="true" />
+                        </button>
                         <button
                           type="button"
                           className="icon-btn icon-btn--danger"
                           aria-label={t("cart.remove", { item: line.description })}
-                          onClick={() => setQuantity(line.variantId, 0)}
+                          onClick={() => setQuantity(line.key, 0)}
                         >
                           <Trash2 size={18} strokeWidth={1.75} aria-hidden="true" />
                         </button>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div>
-              <button type="button" className="btn btn--quiet" onClick={reset}>
-                {t("cart.clear")}
-              </button>
-            </div>
-          </>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
+
+        {(cart.length > 0 || removed) && (
+          <div className="pos-cart-actions">
+            {cart.length > 0 && (
+              <>
+                <button type="button" className="btn" onClick={() => setOpen({ type: "park" })}>
+                  <PauseCircle size={20} strokeWidth={1.75} aria-hidden="true" />
+                  {t("park")}
+                </button>
+                <button type="button" className="btn btn--quiet" onClick={() => (cart.length > 1 ? setOpen({ type: "clear" }) : reset())}>
+                  {t("cart.clear")}
+                </button>
+              </>
+            )}
+            {removed && (
+              <p className="pos-undo" role="status">
+                {t("cart.removed", { item: removed.line.description })}{" "}
+                <button type="button" className="link" onClick={undoRemove}>
+                  {t("cart.undo")}
+                </button>
+              </p>
+            )}
+          </div>
+        )}
+
+        <Browse onChoose={choose} refresh={refresh} />
       </section>
 
       <aside className="pos-pay card" aria-label={t("charge")}>
+        <div className="pos-customer">
+          {customer ? (
+            <>
+              <button type="button" className="pos-customer-name" aria-label={t("customer.change", { name: customer.name })} onClick={() => setOpen({ type: "customer" })}>
+                <UserRound size={20} strokeWidth={1.75} aria-hidden="true" />
+                <span>
+                  <span className="pos-customer-text">{customer.name}</span>
+                  {customer.doc && <span className="muted num">{customer.doc}</span>}
+                </span>
+              </button>
+              <button type="button" className="icon-btn icon-btn--danger" aria-label={t("customer.remove")} onClick={() => setCustomer(null)}>
+                <X size={18} strokeWidth={1.75} aria-hidden="true" />
+              </button>
+            </>
+          ) : (
+            <button type="button" className="btn btn--quiet pos-customer-add" onClick={() => setOpen({ type: "customer" })}>
+              <UserRound size={20} strokeWidth={1.75} aria-hidden="true" />
+              {t("customer.add")}
+            </button>
+          )}
+        </div>
+
+        <div className="pos-sums">
+          {(pricing.lineDiscounts > 0 || pricing.discount > 0 || (pricing.tax > 0 && !taxIncluded)) && (
+            <p className="pos-sum">
+              <span>{t("subtotal")}</span>
+              <span className="num">{formatMoney(pricing.subtotal, currency)}</span>
+            </p>
+          )}
+          {pricing.lineDiscounts > 0 && (
+            <p className="pos-sum">
+              <span>{t("discount.lines")}</span>
+              <span className="num">{formatMoney(-pricing.lineDiscounts, currency)}</span>
+            </p>
+          )}
+          {general && (
+            <p className="pos-sum">
+              <button type="button" className="link" onClick={() => setOpen({ type: "discount" })}>
+                {general.kind === "percent" ? t("discount.percent", { percent: percent.format(general.value / 100) }) : t("discount")}
+              </button>
+              <span className="num" data-testid="discount">
+                {formatMoney(-pricing.discount, currency)}
+              </span>
+            </p>
+          )}
+          {pricing.taxes
+            .filter((tax) => tax.tax > 0)
+            .map((tax) => (
+              <p className="pos-sum" key={tax.id}>
+                <span>
+                  {t("tax.amount", { name: taxName(tax.id), rate: formatTaxRate(tax.rate) })}
+                  {taxIncluded && <span className="muted"> · {t("tax.included")}</span>}
+                </span>
+                <span className="num" data-testid="tax">
+                  {formatMoney(tax.tax, currency)}
+                </span>
+              </p>
+            ))}
+        </div>
+
         <div className="pos-total">
           <span className="pos-total-label">{t("total")}</span>
           <span className="pos-total-value num" data-testid="total">
@@ -353,6 +611,22 @@ export function Pos({ currency, table, methods, sessionId }: PosProps) {
             {equivalents(total, currency, table)}
           </span>
         </div>
+
+        {cart.length > 0 && (
+          <div className="pos-extras">
+            {!general && (
+              <button type="button" className="btn btn--quiet" onClick={() => setOpen({ type: "discount" })}>
+                <Percent size={18} strokeWidth={1.75} aria-hidden="true" />
+                {t("discount.add")}
+              </button>
+            )}
+            <button type="button" className="btn btn--quiet" onClick={() => setOpen({ type: "note" })}>
+              <StickyNote size={18} strokeWidth={1.75} aria-hidden="true" />
+              {note ? t("note") : t("note.add")}
+            </button>
+          </div>
+        )}
+        {note && <p className="pos-note muted">{note}</p>}
 
         {payments.length > 0 && (
           <ul className="pos-lines" aria-label={t("pay.paid")}>
@@ -419,9 +693,7 @@ export function Pos({ currency, table, methods, sessionId }: PosProps) {
                 <span className="muted">{inOthers(result.changeValue)}</span>
               </p>
             )}
-            {result.changeDue < 0 && (
-              <p className="field-error">{t("change.over", { amount: formatMoney(-result.changeDue, currency) })}</p>
-            )}
+            {result.changeDue < 0 && <p className="field-error">{t("change.over", { amount: formatMoney(-result.changeDue, currency) })}</p>}
           </div>
         )}
 
@@ -472,28 +744,107 @@ export function Pos({ currency, table, methods, sessionId }: PosProps) {
           </>
         )}
 
-        <ErrorNote>{error}</ErrorNote>
+        <ErrorNote>{error ?? taxes.error ?? parked.error}</ErrorNote>
 
         <button ref={chargeButton} type="button" className="btn btn--primary btn--lg btn--block" disabled={!canCharge} onClick={() => void charge()}>
           {cart.length > 0 ? t("charge.total", { total: formatMoney(total, currency) }) : t("charge")}
         </button>
-        <p className="pos-shortcuts muted">
-          <span className="kbd">F2</span> <span className="kbd">F4</span> <span className="kbd">F9</span> {t("shortcuts")}
-        </p>
+        <ul className="pos-shortcuts muted" aria-hidden="true">
+          {(
+            [
+              ["F2", "shortcut.search"],
+              ["F4", "shortcut.pay"],
+              ["F6", "shortcut.customer"],
+              ["F7", "shortcut.discount"],
+              ["F8", "shortcut.park"],
+              ["F9", "shortcut.charge"],
+            ] as const
+          ).map(([key, label]) => (
+            <li key={key}>
+              <span className="kbd">{key}</span> {t(label)}
+            </li>
+          ))}
+        </ul>
       </aside>
 
-      {picker && (
-        <VariantPicker
-          product={picker}
+      {open?.type === "picker" && <VariantPicker product={open.product} onPick={(variant) => take(open.product, variant)} onClose={closeDialog} />}
+      {open?.type === "price" && (
+        <OpenPriceDialog
+          description={describeVariant(open.product.name, open.variant)}
           currency={currency}
-          onPick={(variant) => {
-            addVariant(picker, variant);
-            setPicker(null);
+          onAdd={(price) => {
+            addVariant(open.product, open.variant, price);
+            closeDialog();
           }}
-          onClose={() => setPicker(null)}
+          onClose={closeDialog}
         />
       )}
-      {showSales && <SessionSales sessionId={sessionId} onClose={() => setShowSales(false)} />}
+      {editing && (
+        <LineDialog
+          line={editing}
+          currency={currency}
+          onApply={(change) => {
+            setCart((current) => current.map((line) => (line.key === editing.key ? { ...line, ...change } : line)));
+            closeDialog();
+          }}
+          onClose={closeDialog}
+        />
+      )}
+      {open?.type === "discount" && (
+        <DiscountDialog
+          discount={general}
+          amount={pricing.subtotal - pricing.lineDiscounts}
+          currency={currency}
+          onApply={(next) => {
+            setDiscount(next);
+            closeDialog();
+          }}
+          onClose={closeDialog}
+        />
+      )}
+      {open?.type === "customer" && (
+        <CustomerPicker
+          current={customer}
+          onPick={(next) => {
+            setCustomer(next);
+            closeDialog();
+          }}
+          onClose={closeDialog}
+        />
+      )}
+      {open?.type === "note" && (
+        <NoteDialog
+          note={note}
+          onApply={(next) => {
+            setNote(next.trim());
+            closeDialog();
+          }}
+          onClose={closeDialog}
+        />
+      )}
+      {open?.type === "park" && <ParkDialog onPark={(label) => void park(label)} onClose={closeDialog} />}
+      {open?.type === "parked" && (
+        <ParkedDialog
+          parked={parked.data ?? []}
+          busy={cart.length > 0}
+          onTake={(id) => void takeParked(id)}
+          onDiscard={(id) => void discardParked(id)}
+          onClose={closeDialog}
+        />
+      )}
+      {open?.type === "clear" && (
+        <ConfirmDialog
+          title={t("cart.clear.title")}
+          body={t("cart.clear.body", { count: cart.length })}
+          confirm={t("cart.clear.confirm")}
+          onConfirm={() => {
+            reset();
+            closeDialog();
+          }}
+          onClose={closeDialog}
+        />
+      )}
+      {open?.type === "sales" && <SessionSales sessionId={sessionId} onClose={closeDialog} />}
       {sale && (
         <SaleDialog
           sale={sale}
@@ -506,314 +857,5 @@ export function Pos({ currency, table, methods, sessionId }: PosProps) {
         />
       )}
     </div>
-  );
-}
-
-/* ---------- buscador ---------- */
-
-interface ProductSearchProps {
-  inputRef: RefObject<HTMLInputElement | null>;
-  onChoose(product: Product): void;
-  onAdd(product: Product, variant: Variant): void;
-}
-
-function ProductSearch({ inputRef, onChoose, onAdd }: ProductSearchProps) {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<Product[] | null>(null);
-  const [highlight, setHighlight] = useState(0);
-  const ticket = useRef(0);
-
-  useEffect(() => {
-    const text = query.trim();
-    const current = ++ticket.current;
-    if (text === "") {
-      setResults(null);
-      return;
-    }
-    const timer = window.setTimeout(async () => {
-      try {
-        const found = await inventario.search(text);
-        if (current !== ticket.current) return;
-        setResults(found.products);
-        setHighlight(0);
-      } catch {
-        if (current === ticket.current) setResults([]);
-      }
-    }, 120);
-    return () => window.clearTimeout(timer);
-  }, [query]);
-
-  function clear() {
-    ticket.current++;
-    setQuery("");
-    setResults(null);
-    inputRef.current?.focus();
-  }
-
-  function pick(product: Product) {
-    clear();
-    onChoose(product);
-  }
-
-  async function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-      if (!results?.length) return;
-      event.preventDefault();
-      const step = event.key === "ArrowDown" ? 1 : -1;
-      setHighlight((current) => (current + step + results.length) % results.length);
-    } else if (event.key === "Escape") {
-      if (query !== "") {
-        event.preventDefault();
-        clear();
-      }
-    } else if (event.key === "Enter") {
-      event.preventDefault();
-      const text = query.trim();
-      if (text === "") return;
-      // Un lector de códigos teclea y pulsa Enter de golpe: se busca ya, sin esperar.
-      const current = ++ticket.current;
-      try {
-        const found = await inventario.search(text);
-        if (current !== ticket.current) return;
-        const exact = found.exact;
-        const product = exact ? found.products.find((p) => p.id === exact.productId) : undefined;
-        const variant = exact ? product?.variants.find((v) => v.id === exact.variantId) : undefined;
-        if (product && variant) {
-          clear();
-          onAdd(product, variant);
-          return;
-        }
-        // El resaltado solo vale si la lista en pantalla es la de esta misma búsqueda.
-        const chosen = (results && results[highlight] && found.products.find((p) => p.id === results[highlight]?.id)) ?? found.products[0];
-        if (chosen) pick(chosen);
-        else setResults([]);
-      } catch {
-        setResults([]);
-      }
-    }
-  }
-
-  const open = results !== null && query.trim() !== "";
-
-  return (
-    <div className="pos-search">
-      <label className="search">
-        <Search size={20} strokeWidth={1.75} aria-hidden="true" />
-        <span className="sr-only">{t("search.label")}</span>
-        <input
-          ref={inputRef}
-          className="input input--search pos-search-input"
-          type="text"
-          role="combobox"
-          aria-expanded={open}
-          aria-controls="pos-results"
-          aria-activedescendant={open && results?.[highlight] ? `pos-result-${results[highlight].id}` : undefined}
-          aria-autocomplete="list"
-          value={query}
-          placeholder={t("search.placeholder")}
-          autoComplete="off"
-          spellCheck={false}
-          autoFocus
-          onChange={(event) => setQuery(event.target.value)}
-          onKeyDown={(event) => void onKeyDown(event)}
-        />
-      </label>
-      {open && (
-        <ul className="pos-results" id="pos-results" role="listbox" aria-label={t("search.label")}>
-          {results.length === 0 && <li className="pos-results-none">{t("search.none", { query: query.trim() })}</li>}
-          {results.map((product, index) => {
-            const stock = product.variants.reduce((sum, v) => sum + v.stock, 0);
-            return (
-              <li
-                key={product.id}
-                id={`pos-result-${product.id}`}
-                role="option"
-                aria-selected={index === highlight}
-                className="pos-result"
-                // mousedown: el clic no debe quitarle el foco al buscador antes de elegir.
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => pick(product)}
-                onMouseEnter={() => setHighlight(index)}
-              >
-                <span className="pos-result-name">
-                  {product.name}
-                  {product.category && <span className="muted"> · {product.category}</span>}
-                </span>
-                <span className={stock > 0 ? "muted" : "pos-result-out"}>
-                  {stock > 0 ? t("search.stock", { count: stock }) : t("search.nostock")}
-                </span>
-                <span className="num pos-result-price">{formatMoney(product.price, product.currency)}</span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-/* ---------- elegir talla y color ---------- */
-
-interface VariantPickerProps {
-  product: Product;
-  currency: CurrencyCode;
-  onPick(variant: Variant): void;
-  onClose(): void;
-}
-
-function VariantPicker({ product, currency, onPick, onClose }: VariantPickerProps) {
-  // El foco empieza en la primera pieza con existencias.
-  const first = product.variants.findIndex((variant) => variant.stock > 0);
-  return (
-    <Dialog title={`${product.name} · ${formatMoney(product.price, currency)}`} onClose={onClose}>
-      <p className="muted">{t("picker.title")}</p>
-      <div className="picker">
-        {product.variants.map((variant, index) => (
-          <button
-            key={variant.id}
-            type="button"
-            className={`picker-option ${variant.stock > 0 ? "" : "is-out"}`}
-            data-autofocus={index === Math.max(first, 0) ? "" : undefined}
-            onClick={() => onPick(variant)}
-          >
-            <span className="picker-label">{[variant.size, variant.color].filter(Boolean).join(" · ")}</span>
-            <span className="picker-stock">
-              {variant.stock > 0 ? t("picker.stock", { count: variant.stock }) : t("picker.nostock")}
-            </span>
-          </button>
-        ))}
-      </div>
-    </Dialog>
-  );
-}
-
-/* ---------- monto de un pago o de un vuelto ---------- */
-
-interface MoneyEntryProps {
-  method: PaymentMethod;
-  mode: "pago" | "vuelto";
-  /** Lo que falta, en la moneda del medio: es el monto que se propone. */
-  suggested: number;
-  onAdd(amount: number, note: string): void;
-  onCancel(): void;
-}
-
-function MoneyEntry({ method, mode, suggested, onAdd, onCancel }: MoneyEntryProps) {
-  const [amount, setAmount] = useState(suggested > 0 ? plainAmount(suggested, method.currency) : "");
-  const [note, setNote] = useState("");
-  const [touched, setTouched] = useState(false);
-  const value = parseAmount(amount, method.currency);
-  const invalid = value === null || value.amount <= 0;
-  const withNote = mode === "pago" && method.kind === "electronico";
-
-  function submit(event: FormEvent) {
-    event.preventDefault();
-    setTouched(true);
-    if (invalid) return;
-    onAdd(value.amount, note);
-  }
-
-  return (
-    <form
-      className="pos-entry"
-      onSubmit={submit}
-      noValidate
-      onKeyDown={(event) => {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          onCancel();
-        }
-      }}
-    >
-      <label className="field">
-        <span className="field-label">{t("entry.amount", { method: method.name })}</span>
-        <AmountInput
-          currency={method.currency}
-          value={amount}
-          onChange={setAmount}
-          autoFocus
-          aria-invalid={touched && invalid ? true : undefined}
-          data-testid="entry-amount"
-        />
-      </label>
-      {touched && invalid && <p className="field-error">{t("entry.amount.invalid")}</p>}
-      {withNote && (
-        <label className="field">
-          <span className="field-label">{t("entry.note")}</span>
-          <input
-            className="input"
-            value={note}
-            maxLength={PAYMENT_NOTE_MAX}
-            placeholder={t("entry.note.placeholder")}
-            autoComplete="off"
-            onChange={(event) => setNote(event.target.value)}
-          />
-        </label>
-      )}
-      <div className="pos-entry-actions">
-        <button type="button" className="btn" onClick={onCancel}>
-          {t("entry.cancel")}
-        </button>
-        <button type="submit" className="btn btn--primary">
-          {t("entry.add")}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-/* ---------- ventas de esta caja ---------- */
-
-function SessionSales({ sessionId, onClose }: { sessionId: string; onClose(): void }) {
-  const sales = useData(() => ventas.ofSession(sessionId), [sessionId]);
-  const [viewing, setViewing] = useState<Sale | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  async function view(id: string) {
-    setError(null);
-    try {
-      setViewing(await ventas.get(id));
-    } catch (reason) {
-      setError(messageOf(reason));
-    }
-  }
-
-  if (viewing) return <SaleDialog sale={viewing} fresh={false} onClose={() => setViewing(null)} />;
-
-  return (
-    <Dialog title={t("list.title")} size="lg" onClose={onClose}>
-      <ErrorNote>{sales.error ?? error}</ErrorNote>
-      {sales.data && sales.data.length === 0 && <p className="muted">{t("list.empty")}</p>}
-      {sales.data && sales.data.length > 0 && (
-        <div className="table-wrap">
-          <table className="table table--compact">
-            <thead>
-              <tr>
-                <th>{t("list.col.number")}</th>
-                <th>{t("list.col.time")}</th>
-                <th className="right">{t("list.col.pieces")}</th>
-                <th className="right">{t("list.col.total")}</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {sales.data.map((item) => (
-                <tr key={item.id}>
-                  <td className="num">{item.number}</td>
-                  <td>{formatTime(item.createdAt)}</td>
-                  <td className="right num">{item.pieces}</td>
-                  <td className="right num">{formatMoney(item.total, item.currency)}</td>
-                  <td className="right">
-                    <button type="button" className="link" onClick={() => void view(item.id)}>
-                      {t("list.view")}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </Dialog>
   );
 }

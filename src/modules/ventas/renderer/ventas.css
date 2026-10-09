@@ -18,8 +18,15 @@
 
 .pos-top {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--s-3);
   align-items: flex-start;
+}
+
+.pos-top-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
 }
 
 .gate {
@@ -31,7 +38,8 @@
 
 .pos-search {
   position: relative;
-  flex: 1;
+  /* Si no cabe junto a los botones, el buscador se queda con toda la fila. */
+  flex: 1 1 340px;
   min-width: 0;
 }
 
@@ -365,6 +373,316 @@
 
 .sale-lines li:last-child {
   border-bottom: 0;
+}
+
+/* ---------- líneas de la venta: cantidad, descuento y acciones ---------- */
+
+.stepper-value {
+  width: 3em;
+  min-height: calc(var(--control) - 2px);
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.cart-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-1) var(--s-2);
+}
+
+.cart-unit {
+  font-size: var(--fs-sm);
+}
+
+.cart-before {
+  display: block;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  font-weight: 400;
+}
+
+.cart-actions {
+  width: calc(var(--control) * 2);
+  padding-left: 0 !important;
+  white-space: nowrap;
+}
+
+.pos-cart-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.pos-undo {
+  margin-left: auto;
+  font-size: var(--fs-sm);
+}
+
+/* ---------- productos a la vista ---------- */
+
+.browse {
+  display: grid;
+  gap: var(--s-3);
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--s-2);
+}
+
+.tile {
+  display: grid;
+  align-content: space-between;
+  gap: var(--s-2);
+  min-height: 88px;
+  padding: var(--s-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    background-color var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease),
+    transform var(--t-fast) var(--ease);
+}
+
+.tile:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.tile:active {
+  transform: scale(0.98);
+}
+
+.tile-name {
+  display: -webkit-box;
+  overflow: hidden;
+  font-weight: 550;
+  line-height: 1.25;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.tile-foot {
+  display: grid;
+  gap: 2px;
+}
+
+.tile-price {
+  font-weight: 650;
+}
+
+.tile-stock {
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+.tile-stock--out {
+  color: var(--danger);
+  font-weight: 550;
+}
+
+/* ---------- cliente, sumas y extras del cobro ---------- */
+
+.pos-customer {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: var(--control);
+  margin: calc(var(--s-2) * -1) calc(var(--s-2) * -1) 0;
+}
+
+.pos-customer .pos-customer-add {
+  justify-content: flex-start;
+  width: 100%;
+  padding: 0 var(--s-2);
+}
+
+.pos-customer-name {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex: 1;
+  min-width: 0;
+  min-height: var(--control);
+  padding: var(--s-1) var(--s-2);
+  background: none;
+  border: 0;
+  border-radius: var(--radius);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pos-customer-name:hover {
+  background: var(--surface-2);
+}
+
+.pos-customer-name > span {
+  display: grid;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.pos-customer-name .muted {
+  font-size: var(--fs-sm);
+}
+
+.pos-customer-text {
+  overflow: hidden;
+  font-weight: 550;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pos-sums {
+  display: grid;
+  gap: var(--s-1);
+}
+
+.pos-sums:empty {
+  display: none;
+}
+
+.pos-sum {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  font-size: var(--fs-sm);
+}
+
+.pos-extras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+  margin: calc(var(--s-2) * -1) calc(var(--s-2) * -1);
+}
+
+.pos-extras .btn {
+  min-height: 36px;
+  padding: 0 var(--s-2);
+  font-size: var(--fs-sm);
+}
+
+.pos-note {
+  font-size: var(--fs-sm);
+  overflow-wrap: anywhere;
+}
+
+.pos-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--s-1) var(--s-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ---------- descuentos ---------- */
+
+.discount-fields {
+  display: grid;
+  gap: var(--s-3);
+}
+
+.percent {
+  position: relative;
+  display: block;
+  max-width: 180px;
+}
+
+.percent .percent-input {
+  padding-right: calc(var(--s-3) + 1.4em);
+  text-align: right;
+}
+
+.percent-symbol {
+  position: absolute;
+  right: var(--s-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-2);
+  font-weight: 550;
+  pointer-events: none;
+}
+
+.picker-price {
+  font-weight: 550;
+}
+
+/* ---------- ventas en espera ---------- */
+
+.parked {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.parked-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 64px;
+  padding: var(--s-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.parked-item:last-child {
+  border-bottom: 0;
+}
+
+.parked-text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.parked-name {
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+
+.parked-text .muted {
+  font-size: var(--fs-sm);
+}
+
+/* ---------- historial ---------- */
+
+.history-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3) var(--s-5);
+}
+
+.history-search {
+  flex: 1 1 280px;
+  max-width: 420px;
+}
+
+.history-customer {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+}
+
+.history-number {
+  font-weight: 550;
 }
 
 /* En ventanas angostas el cobro pasa debajo de la venta. */
