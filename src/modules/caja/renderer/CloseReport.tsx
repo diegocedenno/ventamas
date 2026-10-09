@@ -26,25 +26,27 @@ export function Difference({ line }: { line: MethodTotals }) {
 export const usedLines = (summary: SessionSummary): MethodTotals[] =>
   summary.totals.filter((line) => line.expected !== 0 || line.counted !== null || line.opening !== 0 || line.sales !== 0);
 
-/** El cierre de una caja en formato de recibo, para imprimirlo. */
-export function CloseDocument({ summary, storeName }: { summary: SessionSummary; storeName: string }) {
+/**
+ * El informe de una caja en formato de recibo, para imprimirlo. De una caja cerrada es su
+ * cierre; de una abierta, un corte: lo que lleva hasta `at`, sin cerrarla.
+ */
+export function CloseDocument({ summary, storeName, at }: { summary: SessionSummary; storeName: string; at: string }) {
+  const cut = summary.closedAt === null;
   return (
     <div className="doc">
       <div className="doc-center">
         {storeName && <p className="doc-store">{storeName}</p>}
-        <p className="doc-tag">{t("report.nonfiscal")}</p>
+        <p className="doc-tag">{cut ? t("report.nonfiscal.cut") : t("report.nonfiscal")}</p>
       </div>
       <hr className="doc-rule" />
       <p className="doc-row">
         <span>{t("report.opened")}</span>
         <span>{formatDateTime(summary.openedAt)}</span>
       </p>
-      {summary.closedAt && (
-        <p className="doc-row">
-          <span>{t("report.closed")}</span>
-          <span>{formatDateTime(summary.closedAt)}</span>
-        </p>
-      )}
+      <p className="doc-row">
+        <span>{cut ? t("report.at") : t("report.closed")}</span>
+        <span>{formatDateTime(summary.closedAt ?? at)}</span>
+      </p>
       <p className="doc-row">
         <span>{t("stat.sales")}</span>
         <span>{summary.salesCount}</span>
@@ -93,15 +95,18 @@ export function CloseDocument({ summary, storeName }: { summary: SessionSummary;
   );
 }
 
-/** El cierre de una caja en pantalla, con la opción de imprimirlo o guardarlo. */
+/** El cierre de una caja (o el corte de una abierta) en pantalla, con la opción de imprimirlo o guardarlo. */
 export function CloseReport({ summary, onClose }: { summary: SessionSummary; onClose(): void }) {
   const { settings } = useApp();
   const printer = usePrint();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
+  // El momento del corte se fija al abrir el informe.
+  const [now] = useState(() => new Date());
   const width = settings["receipt.width"];
-  const document = <CloseDocument summary={summary} storeName={settings["store.name"]} />;
+  const cut = summary.closedAt === null;
+  const document = <CloseDocument summary={summary} storeName={settings["store.name"]} at={now.toISOString()} />;
 
   const once = useOnce();
   async function run(action: () => Promise<string | void>) {
@@ -120,13 +125,13 @@ export function CloseReport({ summary, onClose }: { summary: SessionSummary; onC
   }
 
   // Nombre del archivo con la fecha y hora del equipo: cierre-2026-10-05-18-30
-  const when = new Date(summary.closedAt ?? summary.openedAt);
+  const when = summary.closedAt ? new Date(summary.closedAt) : now;
   const pad = (n: number) => String(n).padStart(2, "0");
-  const name = `cierre-${when.getFullYear()}-${pad(when.getMonth() + 1)}-${pad(when.getDate())}-${pad(when.getHours())}-${pad(when.getMinutes())}`;
+  const name = `${cut ? "corte" : "cierre"}-${when.getFullYear()}-${pad(when.getMonth() + 1)}-${pad(when.getDate())}-${pad(when.getHours())}-${pad(when.getMinutes())}`;
 
   return (
     <Dialog
-      title={t("report.title")}
+      title={cut ? t("report.title.cut") : t("report.title")}
       size="lg"
       onClose={onClose}
       footer={
@@ -135,7 +140,7 @@ export function CloseReport({ summary, onClose }: { summary: SessionSummary; onC
             {t("report.pdf")}
           </button>
           <button type="button" className="btn" disabled={busy} onClick={() => void run(() => printer.print(document, width))}>
-            {t("report.print")}
+            {cut ? t("report.print.cut") : t("report.print")}
           </button>
           <button type="button" className="btn btn--primary" onClick={onClose}>
             {t("report.done")}
@@ -143,6 +148,7 @@ export function CloseReport({ summary, onClose }: { summary: SessionSummary; onC
         </>
       }
     >
+      {cut && <p className="note note--info">{t("report.cut.note")}</p>}
       <dl className="facts">
         <div>
           <dt>{t("report.opened")}</dt>
@@ -175,8 +181,8 @@ export function CloseReport({ summary, onClose }: { summary: SessionSummary; onC
             <tr>
               <th>{t("col.method")}</th>
               <th className="right">{t("col.expected")}</th>
-              <th className="right">{t("col.counted")}</th>
-              <th>{t("col.difference")}</th>
+              {!cut && <th className="right">{t("col.counted")}</th>}
+              {!cut && <th>{t("col.difference")}</th>}
             </tr>
           </thead>
           <tbody>
@@ -184,12 +190,12 @@ export function CloseReport({ summary, onClose }: { summary: SessionSummary; onC
               <tr key={line.method.id}>
                 <td>{line.method.name}</td>
                 <td className="right num">{formatMoney(line.expected, line.method.currency)}</td>
-                <td className="right num">
-                  {line.counted === null ? "—" : formatMoney(line.counted, line.method.currency)}
-                </td>
-                <td>
-                  <Difference line={line} />
-                </td>
+                {!cut && <td className="right num">{line.counted === null ? "—" : formatMoney(line.counted, line.method.currency)}</td>}
+                {!cut && (
+                  <td>
+                    <Difference line={line} />
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

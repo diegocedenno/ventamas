@@ -7,5 +7,5 @@ import "./monedas.css";
 
 export const monedasModule: RendererModule = {
   manifest,
-  screens: [{ id: "tasas", label: t("nav"), icon: ArrowLeftRight, component: RatesScreen, order: 40 }],
+  screens: [{ id: "tasas", label: t("nav"), icon: ArrowLeftRight, component: RatesScreen, order: 60 }],
 };

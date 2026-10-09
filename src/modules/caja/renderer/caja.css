@@ -25,7 +25,7 @@
 }
 
 .cash-count {
-  width: 190px;
+  width: 250px;
 }
 
 /* Elección entre dos o tres opciones, como botones contiguos */
@@ -104,4 +104,40 @@
 
 .methods-label .muted {
   font-size: var(--fs-sm);
+}
+
+/* ---------- contar billetes ---------- */
+
+.cash-count-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+}
+
+.cash-count-row .amount {
+  flex: 1;
+}
+
+.bills td {
+  height: 52px;
+}
+
+.bills-qty {
+  width: 120px;
+}
+
+.bills-qty .input {
+  text-align: right;
+}
+
+.bills-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-4);
+  font-weight: 650;
+}
+
+.bills-total-value {
+  font-size: var(--fs-xl);
 }

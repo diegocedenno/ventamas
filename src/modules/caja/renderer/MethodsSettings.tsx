@@ -1,13 +1,14 @@
 import { useId, useState } from "react";
 import { CURRENCIES } from "@shared/money";
 import { ErrorNote } from "../../../renderer/src/components/Fields";
+import { SettingSwitch } from "../../../renderer/src/components/SettingSwitch";
 import { messageOf } from "../../../renderer/src/lib/ipc";
 import { useData } from "../../../renderer/src/lib/useData";
 import type { PaymentMethod } from "../api";
 import { caja } from "./client";
 import { t } from "./texts";
 
-/** Bloque de Ajustes: qué medios de pago usa la tienda. */
+/** Bloque de Ajustes: qué medios de pago usa la tienda y cómo se cierra la caja. */
 export function MethodsSettings() {
   const methods = useData(() => caja.methods(), []);
   const [error, setError] = useState<string | null>(null);
@@ -26,28 +27,38 @@ export function MethodsSettings() {
   }
 
   return (
-    <section className="card section" aria-labelledby={`${id}-title`}>
-      <h2 className="section-title" id={`${id}-title`}>
-        {t("settings.title")}
-      </h2>
-      <p className="section-hint">{t("settings.hint")}</p>
-      <ul className="methods">
-        {(methods.data ?? []).map((method) => (
-          <li key={method.id} className="methods-item">
-            <label className="methods-label" htmlFor={`${id}-${method.id}`}>
-              <span>{method.name}</span>
-              <span className="muted">
-                {method.kind === "efectivo" ? t("kind.efectivo") : t("kind.electronico")} · {CURRENCIES[method.currency].name}
+    <>
+      <section className="card section" aria-labelledby={`${id}-title`}>
+        <h2 className="section-title" id={`${id}-title`}>
+          {t("settings.title")}
+        </h2>
+        <p className="section-hint">{t("settings.hint")}</p>
+        <ul className="methods">
+          {(methods.data ?? []).map((method) => (
+            <li key={method.id} className="methods-item">
+              <label className="methods-label" htmlFor={`${id}-${method.id}`}>
+                <span>{method.name}</span>
+                <span className="muted">
+                  {method.kind === "efectivo" ? t("kind.efectivo") : t("kind.electronico")} · {CURRENCIES[method.currency].name}
+                </span>
+              </label>
+              <span className="switch">
+                <input id={`${id}-${method.id}`} type="checkbox" role="switch" checked={method.active} onChange={() => void toggle(method)} />
+                <span className="switch-track" />
               </span>
-            </label>
-            <span className="switch">
-              <input id={`${id}-${method.id}`} type="checkbox" role="switch" checked={method.active} onChange={() => void toggle(method)} />
-              <span className="switch-track" />
-            </span>
-          </li>
-        ))}
-      </ul>
-      <ErrorNote>{error ?? methods.error}</ErrorNote>
-    </section>
+            </li>
+          ))}
+        </ul>
+        <ErrorNote>{error ?? methods.error}</ErrorNote>
+      </section>
+
+      <section className="card section" aria-labelledby={`${id}-cash`}>
+        <h2 className="section-title" id={`${id}-cash`}>
+          {t("settings.cash.title")}
+        </h2>
+        <SettingSwitch setting="cash.blind" label={t("settings.blind")} onResult={setError} />
+        <p className="section-hint">{t("settings.blind.hint")}</p>
+      </section>
+    </>
   );
 }

@@ -1,13 +1,16 @@
-import { ArrowDownUp, Lock } from "lucide-react";
+import { ArrowDownUp, Banknote, Lock, Printer } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { parseAmount } from "@shared/money";
+import { Chip } from "../../../renderer/src/components/Choices";
 import { Dialog } from "../../../renderer/src/components/Dialog";
 import { AmountInput, ErrorNote, Field } from "../../../renderer/src/components/Fields";
-import { formatDateTime, formatMoney } from "../../../renderer/src/lib/format";
+import { formatDateTime, formatMoney, plainAmount } from "../../../renderer/src/lib/format";
 import { messageOf } from "../../../renderer/src/lib/ipc";
 import { useOnce } from "../../../renderer/src/lib/useOnce";
 import { useData } from "../../../renderer/src/lib/useData";
+import { useApp } from "../../../renderer/src/state";
 import { NOTE_MAX, REASON_MAX, type PaymentMethod, type SessionSummary } from "../api";
+import { BILLS, countTotal } from "../denominations";
 import { caja } from "./client";
 import { CloseReport } from "./CloseReport";
 import { t } from "./texts";
@@ -170,7 +173,7 @@ interface OpenSessionProps {
 }
 
 function OpenSession({ summary, onChanged, onClosed }: OpenSessionProps) {
-  const [dialog, setDialog] = useState<"move" | "close" | null>(null);
+  const [dialog, setDialog] = useState<"move" | "close" | "cut" | null>(null);
   const lines = summary.totals.filter((line) => line.method.active || line.expected !== 0);
   const cash = lines.filter((line) => line.method.kind === "efectivo" && line.method.active).map((line) => line.method);
 
@@ -186,9 +189,7 @@ function OpenSession({ summary, onChanged, onClosed }: OpenSessionProps) {
         <div className="stat">
           <span className="stat-label">{t("stat.total")}</span>
           <span className="stat-value num">
-            {summary.salesTotals.length
-              ? summary.salesTotals.map((total) => formatMoney(total.amount, total.currency)).join(" · ")
-              : "—"}
+            {summary.salesTotals.length ? summary.salesTotals.map((total) => formatMoney(total.amount, total.currency)).join(" · ") : "—"}
           </span>
         </div>
       </div>
@@ -200,6 +201,10 @@ function OpenSession({ summary, onChanged, onClosed }: OpenSessionProps) {
             <button type="button" className="btn" onClick={() => setDialog("move")}>
               <ArrowDownUp size={20} strokeWidth={1.75} aria-hidden="true" />
               {t("move.action")}
+            </button>
+            <button type="button" className="btn" onClick={() => setDialog("cut")}>
+              <Printer size={20} strokeWidth={1.75} aria-hidden="true" />
+              {t("cut.action")}
             </button>
             <button type="button" className="btn btn--primary" onClick={() => setDialog("close")}>
               {t("close.action")}
@@ -247,6 +252,8 @@ function OpenSession({ summary, onChanged, onClosed }: OpenSessionProps) {
           }}
         />
       )}
+      {/* Con la caja abierta, el informe es un corte: lo que lleva hasta ahora, sin cerrarla. */}
+      {dialog === "cut" && <CloseReport summary={summary} onClose={() => setDialog(null)} />}
       {dialog === "close" && (
         <CloseDialog
           summary={summary}
@@ -276,6 +283,11 @@ function MoveDialog({ methods, onClose, onSaved }: { methods: PaymentMethod[]; o
   const method = methods.find((m) => m.id === methodId) ?? methods[0];
   const value = method ? parseAmount(amount, method.currency) : null;
   const amountInvalid = value === null || value.amount <= 0;
+  // Los motivos de siempre, a un toque; cualquier otro se escribe.
+  const quick =
+    kind === "salida"
+      ? [t("move.reason.out.1"), t("move.reason.out.2"), t("move.reason.out.3"), t("move.reason.out.4")]
+      : [t("move.reason.in.1"), t("move.reason.in.2"), t("move.reason.in.3")];
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -324,7 +336,7 @@ function MoveDialog({ methods, onClose, onSaved }: { methods: PaymentMethod[]; o
         <div className="form-grid">
           <Field label={t("move.method")}>
             {(props) => (
-              <select {...props} className="input" value={method?.id ?? ""} onChange={(event) => setMethodId(event.target.value)}>
+              <select {...props} className="input select" value={method?.id ?? ""} onChange={(event) => setMethodId(event.target.value)}>
                 {methods.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.name}
@@ -350,6 +362,13 @@ function MoveDialog({ methods, onClose, onSaved }: { methods: PaymentMethod[]; o
             />
           )}
         </Field>
+        <div className="chips" role="group" aria-label={t("move.reason.quick")}>
+          {quick.map((text) => (
+            <Chip key={text} pressed={reason === text} onClick={() => setReason(text)}>
+              {text}
+            </Chip>
+          ))}
+        </div>
         <ErrorNote>{error}</ErrorNote>
       </form>
     </Dialog>
@@ -361,11 +380,13 @@ function MoveDialog({ methods, onClose, onSaved }: { methods: PaymentMethod[]; o
 function CloseDialog({ summary, onClose, onClosed }: { summary: SessionSummary; onClose(): void; onClosed(s: SessionSummary): void }) {
   // Se cuentan los medios activos y cualquiera que haya tenido movimiento.
   const lines = summary.totals.filter((line) => line.method.active || line.expected !== 0);
+  const blind = useApp().settings["cash.blind"];
   const [values, setValues] = useState<Record<string, string>>({});
   const [note, setNote] = useState("");
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [counting, setCounting] = useState<PaymentMethod | null>(null);
   const once = useOnce();
 
   const parsed = lines.map((line) => {
@@ -373,8 +394,10 @@ function CloseDialog({ summary, onClose, onClosed }: { summary: SessionSummary; 
     const counted = text === "" ? null : (parseAmount(text, line.method.currency)?.amount ?? NaN);
     return { line, counted };
   });
-  // Lo que tuvo movimiento hay que contarlo; lo demás puede quedar en blanco.
-  const invalid = parsed.some(({ line, counted }) => Number.isNaN(counted) || (counted === null && line.expected !== 0));
+  // Lo que tuvo movimiento hay que contarlo; lo demás puede quedar en blanco. A ciegas se
+  // cuenta todo: decir qué se puede dejar en blanco sería decir dónde no hubo movimiento.
+  const mustCount = (expected: number) => blind || expected !== 0;
+  const invalid = parsed.some(({ line, counted }) => Number.isNaN(counted) || (counted === null && mustCount(line.expected)));
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -413,54 +436,69 @@ function CloseDialog({ summary, onClose, onClosed }: { summary: SessionSummary; 
       }
     >
       <form id="close-form" className="cash-form" onSubmit={submit} noValidate>
-        <p className="muted">{t("close.lead")}</p>
+        <p className="muted">{blind ? t("close.lead.blind") : t("close.lead")}</p>
         <div className="table-wrap">
           <table className="table table--compact">
             <thead>
               <tr>
                 <th>{t("col.method")}</th>
-                <th className="right">{t("col.expected")}</th>
+                {!blind && <th className="right">{t("col.expected")}</th>}
                 <th className="right">{t("col.counted")}</th>
-                <th>{t("col.difference")}</th>
+                {!blind && <th>{t("col.difference")}</th>}
               </tr>
             </thead>
             <tbody>
               {parsed.map(({ line, counted }, index) => {
                 const { method } = line;
-                const missing = touched && (Number.isNaN(counted) || (counted === null && line.expected !== 0));
+                const missing = touched && (Number.isNaN(counted) || (counted === null && mustCount(line.expected)));
                 return (
                   <tr key={method.id}>
                     <td>{method.name}</td>
-                    <td className="right num">{formatMoney(line.expected, method.currency)}</td>
+                    {!blind && <td className="right num">{formatMoney(line.expected, method.currency)}</td>}
                     <td className="cash-count">
-                      <AmountInput
-                        currency={method.currency}
-                        aria-label={t("close.counted.label", { method: method.name })}
-                        aria-invalid={missing ? true : undefined}
-                        value={values[method.id] ?? ""}
-                        autoFocus={index === 0}
-                        onChange={(value) => setValues((current) => ({ ...current, [method.id]: value }))}
-                      />
+                      <span className="cash-count-row">
+                        <AmountInput
+                          currency={method.currency}
+                          aria-label={t("close.counted.label", { method: method.name })}
+                          aria-invalid={missing ? true : undefined}
+                          value={values[method.id] ?? ""}
+                          autoFocus={index === 0}
+                          onChange={(value) => setValues((current) => ({ ...current, [method.id]: value }))}
+                        />
+                        {method.kind === "efectivo" && (
+                          <button
+                            type="button"
+                            className="icon-btn"
+                            aria-label={t("close.bills.label", { method: method.name })}
+                            title={t("close.bills")}
+                            onClick={() => setCounting(method)}
+                          >
+                            <Banknote size={20} strokeWidth={1.75} aria-hidden="true" />
+                          </button>
+                        )}
+                      </span>
                     </td>
-                    <td>
-                      {counted === null || Number.isNaN(counted) ? (
-                        <span className="muted">—</span>
-                      ) : counted === line.expected ? (
-                        <span className="badge badge--accent">{t("close.match")}</span>
-                      ) : (
-                        <span className="badge badge--warn num">
-                          {counted > line.expected ? t("close.over") : t("close.short")}{" "}
-                          {formatMoney(Math.abs(counted - line.expected), method.currency)}
-                        </span>
-                      )}
-                    </td>
+                    {!blind && (
+                      <td>
+                        {counted === null || Number.isNaN(counted) ? (
+                          <span className="muted">—</span>
+                        ) : counted === line.expected ? (
+                          <span className="badge badge--accent">{t("close.match")}</span>
+                        ) : (
+                          <span className="badge badge--warn num">
+                            {counted > line.expected ? t("close.over") : t("close.short")}{" "}
+                            {formatMoney(Math.abs(counted - line.expected), method.currency)}
+                          </span>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
-        {touched && invalid && <p className="field-error">{t("close.invalid")}</p>}
+        {touched && invalid && <p className="field-error">{blind ? t("close.invalid.blind") : t("close.invalid")}</p>}
         <Field label={t("close.note")}>
           {(props) => (
             <input
@@ -475,6 +513,115 @@ function CloseDialog({ summary, onClose, onClosed }: { summary: SessionSummary; 
           )}
         </Field>
         <ErrorNote>{error}</ErrorNote>
+      </form>
+      {counting && (
+        <BillCounter
+          method={counting}
+          onApply={(total) => {
+            setValues((current) => ({ ...current, [counting.id]: plainAmount(total, counting.currency) }));
+            setCounting(null);
+          }}
+          onClose={() => setCounting(null)}
+        />
+      )}
+    </Dialog>
+  );
+}
+
+/* ---------- contar billetes ---------- */
+
+interface BillCounterProps {
+  method: PaymentMethod;
+  onApply(total: number): void;
+  onClose(): void;
+}
+
+/** Contar el efectivo billete por billete: se escribe cuántos hay de cada uno y la suma se hace sola. */
+function BillCounter({ method, onApply, onClose }: BillCounterProps) {
+  const { currency } = method;
+  const [quantities, setQuantities] = useState<Record<number, string>>({});
+  const [loose, setLoose] = useState("");
+  const [touched, setTouched] = useState(false);
+
+  const counts: Record<number, number> = {};
+  let invalid = false;
+  for (const bill of BILLS[currency]) {
+    const text = (quantities[bill] ?? "").trim();
+    if (text === "") continue;
+    if (/^\d{1,6}$/.test(text)) counts[bill] = Number(text);
+    else invalid = true;
+  }
+  const looseValue = loose.trim() === "" ? 0 : (parseAmount(loose, currency)?.amount ?? null);
+  const total = invalid || looseValue === null ? null : countTotal(currency, counts, looseValue);
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    // Este formulario vive dentro de la ventana de cierre: su envío no debe cerrar la caja.
+    event.stopPropagation();
+    setTouched(true);
+    if (total === null) return;
+    onApply(total);
+  }
+
+  return (
+    <Dialog
+      title={t("bills.title", { method: method.name })}
+      onClose={onClose}
+      footer={
+        <>
+          <button type="button" className="btn" onClick={onClose}>
+            {t("cancel")}
+          </button>
+          <button type="submit" form="bills-form" className="btn btn--primary">
+            {t("bills.apply")}
+          </button>
+        </>
+      }
+    >
+      <form id="bills-form" className="cash-form" onSubmit={submit} noValidate>
+        <p className="muted">{t("bills.lead")}</p>
+        <div className="table-wrap">
+          <table className="table table--compact bills">
+            <thead>
+              <tr>
+                <th>{t("bills.col.bill")}</th>
+                <th className="right">{t("bills.col.qty")}</th>
+                <th className="right">{t("bills.col.sum")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {BILLS[currency].map((bill, index) => {
+                const label = formatMoney(countTotal(currency, { [bill]: 1 }) ?? 0, currency);
+                const sum = countTotal(currency, { [bill]: counts[bill] ?? 0 });
+                return (
+                  <tr key={bill}>
+                    <td className="num">{label}</td>
+                    <td className="bills-qty">
+                      <input
+                        className="input num"
+                        aria-label={t("bills.qty.label", { bill: label })}
+                        inputMode="numeric"
+                        autoComplete="off"
+                        data-autofocus={index === 0 ? "" : undefined}
+                        value={quantities[bill] ?? ""}
+                        onChange={(event) => setQuantities((current) => ({ ...current, [bill]: event.target.value }))}
+                      />
+                    </td>
+                    <td className="right num">{sum ? formatMoney(sum, currency) : <span className="muted">—</span>}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <Field label={t("bills.loose")}>
+          {(props) => <AmountInput {...props} currency={currency} value={loose} placeholder="0,00" onChange={setLoose} />}
+        </Field>
+        {touched && total === null && <p className="field-error">{t("bills.invalid")}</p>}
+        <p className="bills-total" role="status">
+          <span>{t("bills.total")}</span>
+          <span className="bills-total-value num">{formatMoney(total ?? 0, currency)}</span>
+        </p>
       </form>
     </Dialog>
   );
