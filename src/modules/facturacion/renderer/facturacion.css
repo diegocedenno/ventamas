@@ -1,0 +1,286 @@
+/* ---------- la factura dentro de la ventana de una venta ---------- */
+
+.invoice-box {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  background: var(--surface-2);
+  border-radius: var(--radius);
+}
+
+.invoice-box-text {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.invoice-box-text > span {
+  display: grid;
+  line-height: 1.3;
+}
+
+.invoice-box-text .muted {
+  font-size: var(--fs-sm);
+}
+
+.invoice-control {
+  max-width: 320px;
+}
+
+/* ---------- ajustes ---------- */
+
+.invoice-modes {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.invoice-mode {
+  display: grid;
+  gap: 2px;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition:
+    border-color var(--t-fast) var(--ease),
+    background-color var(--t-fast) var(--ease);
+}
+
+.invoice-mode:hover {
+  background: var(--surface-2);
+}
+
+.invoice-mode:has(input:checked) {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.invoice-mode:has(input:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.invoice-mode-name {
+  font-weight: 650;
+}
+
+.invoice-mode-hint {
+  font-size: var(--fs-sm);
+}
+
+.invoice-warning {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s-4);
+  align-items: start;
+}
+
+.invoice-warning-icon {
+  margin-top: 2px;
+  color: var(--warning);
+}
+
+.invoice-list {
+  display: grid;
+  gap: var(--s-2);
+  margin: 0;
+  padding-left: 1.4em;
+  color: var(--text-2);
+}
+
+/* ---------- facturas del mes ---------- */
+
+.invoices-month {
+  max-width: 220px;
+}
+
+.invoices-number {
+  font-weight: 550;
+}
+
+.invoices-sub {
+  display: block;
+  font-size: var(--fs-sm);
+}
+
+.invoices-totals th,
+.invoices-totals td {
+  border-top: 1px solid var(--border-strong);
+  border-bottom: 0;
+  font-weight: 650;
+}
+
+.invoices-sheets {
+  display: grid;
+  gap: var(--s-1);
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+/* ---------- la factura impresa en una hoja ---------- */
+
+.sheet {
+  box-sizing: border-box;
+  padding: 10mm 12mm;
+  font-size: 10.5pt;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+
+.sheet p,
+.sheet dl,
+.sheet dd {
+  margin: 0;
+}
+
+.sheet-copy {
+  margin-bottom: 4mm;
+  padding: 2mm 3mm;
+  border: 1px solid #000000;
+  font-size: 8.5pt;
+  text-align: center;
+}
+
+.sheet-copy p:first-child {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.sheet-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8mm;
+}
+
+.sheet-issuer {
+  font-size: 9pt;
+}
+
+.sheet-name {
+  font-size: 12pt;
+  font-weight: 700;
+}
+
+.sheet-legend {
+  margin-top: 1mm;
+  font-weight: 700;
+}
+
+.sheet-id {
+  flex: none;
+  text-align: right;
+}
+
+.sheet-title {
+  font-size: 15pt;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.sheet-number {
+  font-size: 12pt;
+  font-weight: 700;
+}
+
+.sheet-customer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1mm 8mm;
+  margin-top: 5mm;
+  padding: 2mm 0;
+  border-top: 1px solid #000000;
+  border-bottom: 1px solid #000000;
+}
+
+.sheet-customer > div {
+  display: flex;
+  gap: 2mm;
+}
+
+.sheet-wide {
+  grid-column: 1 / -1;
+}
+
+.sheet-customer dt {
+  flex: none;
+  font-weight: 700;
+}
+
+.sheet-customer dt::after {
+  content: ":";
+}
+
+.sheet-lines,
+.sheet-totals {
+  border-collapse: collapse;
+}
+
+.sheet-lines {
+  width: 100%;
+  margin-top: 3mm;
+}
+
+.sheet-lines th {
+  padding: 1mm 0;
+  border-bottom: 1px solid #000000;
+  font-size: 9pt;
+  text-align: left;
+}
+
+.sheet-lines td {
+  padding: 0.8mm 0;
+  vertical-align: top;
+}
+
+.sheet-qty {
+  width: 14mm;
+}
+
+.sheet-lines .sheet-amount {
+  width: 34mm;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.sheet-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8mm;
+  margin-top: 3mm;
+  padding-top: 2mm;
+  border-top: 1px solid #000000;
+}
+
+.sheet-notes {
+  font-size: 9pt;
+}
+
+.sheet-totals {
+  flex: none;
+}
+
+.sheet-totals th {
+  padding: 0.5mm 6mm 0.5mm 0;
+  font-weight: 400;
+  text-align: right;
+}
+
+.sheet-totals td {
+  min-width: 30mm;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.sheet-total th,
+.sheet-total td {
+  padding-top: 1.5mm;
+  font-size: 12pt;
+  font-weight: 700;
+}
+
+.sheet-local {
+  margin-top: 3mm;
+  padding-top: 2mm;
+  border-top: 1px dashed #000000;
+  font-size: 9pt;
+}
